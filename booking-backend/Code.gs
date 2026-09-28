@@ -41,8 +41,7 @@ const CONFIG = {
   ZOOM_LINK: 'https://zoom.us/j/ВАШ_ІДЕНТИФІКАТОР', // постійне посилання на вашу конференцію
   ZOOM_NOTE: '',                               // напр. 'Ідентифікатор: 123 456 7890, код: 1234'
   BOOKING_PAGE_URL: 'https://kisilmv.github.io/booking.html',
-  TEACHER_NAME: 'Микола Кісіль',
-  PRICE_NOTE: 'Вартість — від $15 за 60 хвилин. Реквізити для оплати я надішлю окремо.'
+  TEACHER_NAME: 'Микола Кісіль'
 };
 
 /* Необов'язково: сповіщення в Telegram.
@@ -133,7 +132,7 @@ function book_(body) {
 
   const name = clean_(body.name, 80);
   const email = clean_(body.email, 120).toLowerCase();
-  const goal = GOALS.indexOf(body.goal) >= 0 ? body.goal : 'Інше';
+  const goal = GOALS.indexOf(body.goal) >= 0 ? body.goal : '';
   const note = clean_(body.note, 1000);
 
   if (name.length < 2) return fail_('invalid', 'Вкажіть, будь ласка, ім’я.');
@@ -155,7 +154,7 @@ function book_(body) {
   ev.setDescription([
     'Студент: ' + name,
     'Email: ' + email,
-    'Мета: ' + goal,
+    goal ? 'Мета: ' + goal : '',
     note ? 'Коментар: ' + note : '',
     'Заброньовано: ' + fmt_(new Date(), 'dd.MM.yyyy HH:mm') + ' (через сайт)'
   ].filter(Boolean).join('\n'));
@@ -224,7 +223,6 @@ function sendStudentConfirmation_(ev, name, email, cancelUrl) {
     '<p>Вітаю, ' + esc_(name) + '!</p>' +
     '<p>Заняття з англійської заброньовано:<br><b>' + esc_(when) + '</b> (за київським часом), 60 хвилин.</p>' +
     '<p>Посилання на Zoom: <a href="' + esc_(CONFIG.ZOOM_LINK) + '">' + esc_(CONFIG.ZOOM_LINK) + '</a>' + zoomNote + '</p>' +
-    '<p>' + esc_(CONFIG.PRICE_NOTE) + '</p>' +
     '<p>Якщо плани зміняться, скасуйте заняття не пізніше ніж за ' + CONFIG.CANCEL_MIN_HOURS +
     ' год до початку: <a href="' + esc_(cancelUrl) + '">скасувати бронювання</a>.</p>' +
     '<p>До зустрічі!<br>' + esc_(CONFIG.TEACHER_NAME) + '</p>';

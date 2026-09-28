@@ -243,7 +243,6 @@ const CANCEL_MIN_HOURS = 12;
           key: current.key,
           name: name,
           email: email,
-          goal: $('b-goal').value,
           note: $('b-note').value.trim(),
           website: $('b-website').value
         });
