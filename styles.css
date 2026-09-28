@@ -1815,3 +1815,36 @@ button {
     margin: 0;
   }
 }
+
+/* Посилання на онлайн-запис */
+.nav-link--accent {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.cta-band .btn--secondary {
+  border-color: currentColor;
+  background-color: transparent;
+  color: var(--color-accent-contrast);
+}
+
+.cta-band .btn--secondary:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--color-accent-contrast);
+}
+
+.nav-link {
+  white-space: nowrap;
+}
+
+@media (min-width: 60em) and (max-width: 74.99em) {
+  .site-header .brand-role {
+    display: none;
+  }
+}
