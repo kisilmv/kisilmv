@@ -628,21 +628,42 @@ button {
 }
 
 .hero-price {
-  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: stretch;
   margin: 0 0 0 var(--space-2);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent-soft);
   color: var(--color-text-muted);
   font-size: var(--fs-sm);
+  line-height: 1.2;
 }
 
 @media (max-width: 30rem) {
-  .hero-price { margin-left: 0; }
+  .hero-price {
+    margin-left: 0;
+    padding-block: var(--space-2);
+  }
+}
+
+.hero-price-from {
+  color: var(--color-accent);
+  font-weight: 600;
 }
 
 .hero-price strong {
-  color: var(--color-heading);
+  color: var(--color-accent);
   font-family: var(--font-serif);
-  font-size: var(--fs-lg);
+  font-size: 1.75rem;
   font-weight: 700;
+  line-height: 1;
+}
+
+.hero-price-unit {
+  font-size: var(--fs-xs);
 }
 
 .follow {
