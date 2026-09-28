@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-495CR8HH3T"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-495CR8HH3T');
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Запис на заняття з англійської — Микола Кісіль</title>
+  <meta name="description" content="Онлайн-запис на індивідуальні заняття з англійської мови в Zoom: оберіть вільний час у розкладі й забронюйте його за хвилину.">
+  <link rel="canonical" href="https://kisilmv.github.io/booking.html">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32x32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#faf8f4">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://kisilmv.github.io/booking.html">
+  <meta property="og:title" content="Запис на заняття з англійської — Микола Кісіль">
+  <meta property="og:description" content="Оберіть вільний час у розкладі й забронюйте заняття в Zoom.">
+  <meta property="og:image" content="https://kisilmv.github.io/photo.jpg">
+  <meta property="og:locale" content="uk_UA">
+  <script>
+    (function () {
+      var theme = null;
+      try { theme = window.localStorage.getItem('theme'); } catch (error) { theme = null; }
+      if (theme !== 'light' && theme !== 'dark') {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=20260928c">
+  <link rel="stylesheet" href="booking.css?v=20260928a">
+  <script src="script.js?v=20260928" defer></script>
+  <script src="booking.js?v=20260928a" defer></script>
+</head>
+<body class="booking-page">
+  <a class="skip-link" href="#main">Перейти до основного вмісту</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Микола Кісіль — на головну сторінку">
+        <span class="brand-mark" aria-hidden="true">МК</span>
+        <span class="brand-text">
+          <span class="brand-name">Микола Кісіль</span>
+          <span class="brand-role">англійська мова · переклад · термінознавство</span>
+        </span>
+      </a>
+
+      <div class="header-actions">
+        <a class="booking-home-link" href="index.html">На головну</a>
+        <button class="icon-button theme-toggle" type="button" aria-pressed="false" aria-label="Темна тема" title="Перемкнути тему">
+          <svg class="icon icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <svg class="icon icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="section booking-section" aria-labelledby="booking-title">
+      <div class="container">
+
+        <!-- Режим «Розклад» -->
+        <div id="view-schedule">
+          <header class="section-header">
+            <p class="section-kicker">Онлайн-запис</p>
+            <h1 class="section-title" id="booking-title">Оберіть час заняття</h1>
+            <p class="section-intro">
+              Натисніть на вільний слот, вкажіть ім’я та email — і заняття заброньовано. Посилання на Zoom прийде листом одразу після бронювання.
+            </p>
+            <ul class="booking-facts">
+              <li>60 хвилин у Zoom</li>
+              <li>від $15 за заняття</li>
+              <li>час указано за Києвом</li>
+            </ul>
+          </header>
+
+          <div class="booking-toolbar">
+            <p class="booking-status" id="slots-status" role="status" aria-live="polite">Завантажую розклад…</p>
+            <button class="btn btn--secondary btn--sm" type="button" id="slots-refresh" hidden>Оновити</button>
+          </div>
+
+          <div class="slot-days" id="slot-days"></div>
+
+          <aside class="booking-note">
+            <h2 class="booking-note-title">Як скасувати</h2>
+            <p>
+              У листі-підтвердженні є посилання для скасування. Скористатися ним можна не пізніше ніж
+              за <span data-cancel-hours>12</span> годин до початку заняття. Пізніше — напишіть мені напряму.
+              Не знайшли зручного часу? <a href="index.html#contacts">Залиште заявку</a>, і я запропоную варіанти.
+            </p>
+          </aside>
+        </div>
+
+        <!-- Режим «Скасування» -->
+        <div id="view-cancel" hidden>
+          <header class="section-header">
+            <p class="section-kicker">Онлайн-запис</p>
+            <h1 class="section-title">Скасування заняття</h1>
+          </header>
+          <div class="booking-card" id="cancel-card">
+            <p class="booking-status" id="cancel-status" role="status" aria-live="polite">Шукаю бронювання…</p>
+            <div id="cancel-details" hidden>
+              <p class="booking-when" id="cancel-when"></p>
+              <p class="booking-muted" id="cancel-hint"></p>
+              <div class="booking-actions">
+                <button class="btn btn--primary" type="button" id="cancel-confirm">Скасувати заняття</button>
+                <a class="btn btn--secondary" href="booking.html">Залишити як є</a>
+              </div>
+            </div>
+            <div class="booking-actions" id="cancel-after" hidden>
+              <a class="btn btn--primary" href="booking.html">Обрати інший час</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Діалог бронювання -->
+  <dialog class="booking-dialog" id="booking-dialog" aria-labelledby="dialog-title">
+    <div class="booking-dialog-inner">
+      <button class="icon-button dialog-close" type="button" data-close aria-label="Закрити">
+        <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+
+      <form id="booking-form" novalidate>
+        <h2 class="dialog-title" id="dialog-title">Бронювання заняття</h2>
+        <p class="booking-when" id="dialog-when"></p>
+
+        <div class="field">
+          <label for="b-name">Ім’я <span class="required" aria-hidden="true">*</span></label>
+          <input id="b-name" name="name" type="text" autocomplete="name" maxlength="80" required>
+        </div>
+        <div class="field">
+          <label for="b-email">Email <span class="required" aria-hidden="true">*</span></label>
+          <input id="b-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="120" required>
+        </div>
+        <div class="field">
+          <label for="b-goal">Мета занять</label>
+          <select id="b-goal" name="goal">
+            <option>Індивідуальні заняття</option>
+            <option>Підготовка до НМТ</option>
+            <option>Cambridge English</option>
+            <option>IELTS, TOEFL та інші іспити</option>
+            <option>Англійська для IT і бізнесу</option>
+            <option>Персональний інструктор</option>
+            <option>Інше</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="b-note">Коментар</label>
+          <textarea id="b-note" name="note" rows="3" maxlength="1000" placeholder="Ваш рівень, дедлайн, побажання — за бажанням"></textarea>
+        </div>
+        <div class="hp-field" aria-hidden="true">
+          <label for="b-website">Не заповнюйте це поле</label>
+          <input id="b-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <p class="form-status" id="form-status" role="alert"></p>
+
+        <div class="booking-actions">
+          <button class="btn btn--primary" type="submit" id="booking-submit">Забронювати</button>
+          <button class="btn btn--secondary" type="button" data-close>Скасувати</button>
+        </div>
+        <p class="form-note">Натискаючи «Забронювати», ви погоджуєтеся отримати лист-підтвердження на вказаний email.</p>
+      </form>
+
+      <div class="booking-success" id="booking-success" hidden>
+        <svg class="booking-success-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
+        <h2 class="dialog-title">Заняття заброньовано</h2>
+        <p class="booking-when" id="success-when"></p>
+        <p>Лист із посиланням на Zoom і посиланням для скасування надіслано на <b id="success-email"></b>. Якщо не бачите його, перевірте теку «Спам».</p>
+        <div class="booking-actions">
+          <button class="btn btn--primary" type="button" data-close>Готово</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <a class="brand brand--small" href="index.html" aria-label="Микола Кісіль — на головну сторінку">
+        <span class="brand-mark" aria-hidden="true">МК</span>
+        <span class="brand-name">Микола Кісіль</span>
+      </a>
+      <nav class="footer-nav" aria-label="Навігація в підвалі">
+        <ul>
+          <li><a href="index.html#lessons">Заняття</a></li>
+          <li><a href="index.html#about">Про мене</a></li>
+          <li><a href="index.html#contacts">Контакти</a></li>
+        </ul>
+      </nav>
+      <p class="footer-copy">© <span data-current-year>2026</span> Микола Кісіль. Усі права захищено.</p>
+    </div>
+  </footer>
+</body>
+</html>

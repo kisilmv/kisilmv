@@ -1,0 +1,340 @@
+/* ==========================================================================
+   Сторінка онлайн-запису (booking.html)
+   Використовує дизайн-токени зі styles.css
+   ========================================================================== */
+
+.booking-section {
+  padding-block: var(--space-12) var(--space-16);
+  min-height: 60vh;
+}
+
+.booking-home-link {
+  margin-right: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.booking-home-link:hover {
+  color: var(--color-accent);
+}
+
+.booking-page .brand-role {
+  display: none;
+}
+
+@media (min-width: 40em) {
+  .booking-page .brand-role {
+    display: block;
+  }
+}
+
+.booking-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.booking-facts li {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.booking-facts li:nth-child(2) {
+  border-color: transparent;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-weight: 600;
+}
+
+/* Панель стану */
+.booking-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.booking-status {
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.booking-status.is-error {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.btn--sm {
+  min-height: 2.25rem;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+}
+
+/* Дні зі слотами */
+.slot-days {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 40em) {
+  .slot-days {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  }
+}
+
+.slot-day {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.slot-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.slot-day-title span {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.slot-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 7.5rem;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-accent-strong);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+.slot-btn:hover {
+  background-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.slot-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.slot-local {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.slot-empty {
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.slot-empty p + p {
+  margin-top: var(--space-3);
+}
+
+/* Скелетон завантаження */
+.slot-day--skeleton {
+  min-height: 8rem;
+  background: linear-gradient(90deg, var(--color-surface) 0%, var(--color-surface-alt) 50%, var(--color-surface) 100%);
+  background-size: 200% 100%;
+  animation: booking-shimmer 1.4s linear infinite;
+}
+
+@keyframes booking-shimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-day--skeleton { animation: none; }
+}
+
+/* Примітка */
+.booking-note {
+  max-width: 48rem;
+  margin-top: var(--space-10);
+  padding: var(--space-5) var(--space-6);
+  border-left: 3px solid var(--color-accent);
+  background-color: var(--color-surface-alt);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.booking-note-title {
+  margin-bottom: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  color: var(--color-heading);
+}
+
+.booking-note a {
+  color: var(--color-accent);
+}
+
+/* Картка скасування */
+.booking-card {
+  max-width: 36rem;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.booking-when {
+  font-family: var(--font-serif);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  color: var(--color-heading);
+}
+
+.booking-when small {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.booking-muted {
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+/* Діалог */
+.booking-dialog {
+  width: min(100% - 2rem, 32rem);
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+}
+
+.booking-dialog::backdrop {
+  background-color: rgba(10, 14, 20, 0.55);
+}
+
+.booking-dialog-inner {
+  position: relative;
+  padding: var(--space-6);
+}
+
+.booking-dialog form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.dialog-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
+.dialog-title {
+  padding-right: var(--space-10);
+  font-size: var(--fs-xl);
+}
+
+.booking-dialog .booking-when {
+  font-size: var(--fs-lg);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.booking-dialog .booking-when small {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.booking-dialog .booking-actions {
+  margin-top: 0;
+}
+
+.booking-dialog .form-note {
+  font-size: var(--fs-xs);
+}
+
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.booking-success {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.booking-success[hidden] {
+  display: none;
+}
+
+.booking-success-icon {
+  color: var(--color-success);
+}
+
+[data-theme="dark"] .booking-success-icon {
+  color: var(--color-accent);
+}
+
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
