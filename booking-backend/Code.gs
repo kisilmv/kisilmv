@@ -13,10 +13,24 @@
  */
 
 /* ==========================================================================
+   Перевірка з редактора: ця функція стоїть першою, тож просто натисніть «▶ Виконати».
+   Перший запуск попросить дозволи на Календар і Пошту — це нормально.
+   ========================================================================== */
+function testSetup() {
+  const cal = getCalendar_();
+  const slots = listFreeSlots_();
+  console.log('Календар: ' + cal.getName());
+  console.log('Вільних слотів найближчим часом: ' + slots.length);
+  slots.slice(0, 5).forEach((s) => console.log(s.start + ' → ' + s.end));
+  MailApp.getRemainingDailyQuota(); // запит дозволу на пошту
+}
+
+/* ==========================================================================
    НАЛАШТУВАННЯ — змініть під себе
    ========================================================================== */
 const CONFIG = {
-  CALENDAR_NAME: 'Приватні заняття',          // назва окремого календаря зі слотами
+  CALENDAR_ID: 'aa02fa94f6ddabfb6f3753a185713e93a3e38d55ecd09c5422515919b8d8ef04@group.calendar.google.com', // ідентифікатор календаря «Приватні заняття»
+  CALENDAR_NAME: 'Приватні заняття',          // запасний варіант: пошук за назвою
   FREE_TITLE: 'Вільно',                        // назва події, що означає відкритий слот
   BOOKED_PREFIX: 'Зайнято: ',                  // префікс назви заброньованої події
   TIMEZONE: 'Europe/Kyiv',
@@ -65,7 +79,7 @@ function doGet(e) {
     }
   } catch (err) {
     console.error(err);
-    return json_(fail_('server', 'Сталася помилка на сервері. Спробуйте пізніше.'));
+    return json_(serverError_(err));
   }
 }
 
@@ -87,7 +101,7 @@ function doPost(e) {
     }
   } catch (err) {
     console.error(err);
-    return json_(fail_('server', 'Сталася помилка на сервері. Спробуйте пізніше.'));
+    return json_(serverError_(err));
   }
 }
 
@@ -277,9 +291,19 @@ function notifyTeacher_(title, ev, name, email, goal, note) {
    Допоміжні функції
    ========================================================================== */
 function getCalendar_() {
+  if (CONFIG.CALENDAR_ID) {
+    const byId = CalendarApp.getCalendarById(CONFIG.CALENDAR_ID);
+    if (byId) return byId;
+  }
   const cals = CalendarApp.getCalendarsByName(CONFIG.CALENDAR_NAME);
   if (!cals.length) throw new Error('Календар «' + CONFIG.CALENDAR_NAME + '» не знайдено');
   return cals[0];
+}
+
+function serverError_(err) {
+  const res = fail_('server', 'Сталася помилка на сервері. Спробуйте пізніше.');
+  res.detail = String((err && err.message) || err);
+  return res;
 }
 
 function isFree_(ev) {
@@ -396,17 +420,4 @@ function fail_(code, message) {
 
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
-
-/* ==========================================================================
-   Перевірка з редактора: виберіть testSetup і натисніть «Виконати».
-   Перший запуск попросить дозволи на Календар і Пошту — це нормально.
-   ========================================================================== */
-function testSetup() {
-  const cal = getCalendar_();
-  const slots = listFreeSlots_();
-  console.log('Календар: ' + cal.getName());
-  console.log('Вільних слотів найближчим часом: ' + slots.length);
-  slots.slice(0, 5).forEach((s) => console.log(s.start + ' → ' + s.end));
-  MailApp.getRemainingDailyQuota(); // запит дозволу на пошту
 }
