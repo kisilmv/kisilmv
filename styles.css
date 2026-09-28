@@ -627,6 +627,24 @@ button {
   margin-top: var(--space-8);
 }
 
+.hero-price {
+  align-self: center;
+  margin: 0 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+@media (max-width: 30rem) {
+  .hero-price { margin-left: 0; }
+}
+
+.hero-price strong {
+  color: var(--color-heading);
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
 .follow {
   max-width: 36rem;
   margin-top: var(--space-8);
