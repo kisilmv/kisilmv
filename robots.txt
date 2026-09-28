@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kisilmv.github.io/sitemap.xml

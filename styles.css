@@ -588,6 +588,13 @@ button {
   letter-spacing: -0.01em;
 }
 
+.hero-title .eyebrow {
+  display: block;
+  font-family: var(--font-sans);
+  line-height: var(--lh-base);
+  text-wrap: wrap;
+}
+
 .hero-lead {
   max-width: 38em;
   margin-top: var(--space-5);
