@@ -4,13 +4,13 @@
    Ці ключі не є секретом: захист забезпечують правила бази (database.rules.json).
    ========================================================================= */
 window.FIREBASE_CONFIG = {
-  apiKey: "ВСТАВТЕ_apiKey",
-  authDomain: "ваш-проєкт.firebaseapp.com",
-  databaseURL: "https://ваш-проєкт-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "ваш-проєкт",
-  appId: "ВСТАВТЕ_appId"
+  apiKey: "AIzaSyASOCkkuxd-ikXRURnzKN8Fd6i1e2vZ13E",
+  authDomain: "kisilmv-8c0e2.firebaseapp.com",
+  databaseURL: "https://kisilmv-8c0e2-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "kisilmv-8c0e2",
+  appId: "1:996211549761:web:39151cece8dd71dd4308c0"
 };
 
 /* Ваш Google-акаунт — лише він відкриває пульт викладача.
    Ту саму адресу вкажіть у database.rules.json (двічі). */
-window.TEACHER_EMAIL = "ваша.адреса@gmail.com";
+window.TEACHER_EMAIL = "kisilmv@gmail.com";
