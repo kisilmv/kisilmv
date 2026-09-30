@@ -166,10 +166,24 @@
     });
     if (isScreen) ctx.results = isLive && state.shared ? state.results : null;
 
+    const same = view.dataset.slide === slide.id;
+    const prevStep = same ? +(view.dataset.step || 0) : -1;
+    const prevRev = same && view.dataset.rev === '1';
+
     const el = LS.render(slide, ctx);
     view.replaceChildren(el);
     view.dataset.slide = slide.id;
+    view.dataset.step = ctx.step;
+    view.dataset.rev = ctx.revealed ? '1' : '';
     view.scrollTop = scroll;
+
+    // на малих екранах підтягнути щойно відкритий пункт або ключ у поле зору
+    if (!isScreen && isLive && same) {
+      let target = null;
+      if (ctx.step > prevStep) target = Array.from(view.querySelectorAll('.is-new')).pop();
+      if (!target && ctx.revealed && !prevRev) target = view.querySelector('.s-explain');
+      if (target) target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
     const inp = view.querySelector('.ans-in');
     if (inp && draft) inp.value = draft;
     if (inp && hadFocus) inp.focus();
