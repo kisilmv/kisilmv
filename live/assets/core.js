@@ -1,0 +1,335 @@
+/* =========================================================================
+   Live Slides — спільне ядро для presenter.html і live.html
+   Рендер слайдів + два транспорти синхронізації:
+     • Firebase Realtime Database (робочий режим)
+     • BroadcastChannel (?demo — перевірка в одному браузері без Firebase)
+   ========================================================================= */
+(function () {
+  'use strict';
+  const LS = (window.LS = {});
+
+  LS.params = new URLSearchParams(location.search);
+  LS.isDemo = LS.params.has('demo');
+
+  /* ---------- утиліти ---------- */
+  LS.esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  LS.loadScript = (src) => new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = res;
+    s.onerror = () => rej(new Error('Не вдалося завантажити ' + src));
+    document.head.appendChild(s);
+  });
+
+  LS.store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* приватний режим */ } },
+  };
+
+  LS.norm = (s) => String(s || '').trim().toLowerCase().replace(/[’‘`]/g, "'").replace(/\s+/g, ' ').replace(/[.!?,;]+$/, '');
+
+  LS.roomCode = () => {
+    const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const b = crypto.getRandomValues(new Uint8Array(4));
+    return Array.from(b, (x) => a[x % a.length]).join('');
+  };
+
+  LS.validRoom = (r) => /^[A-Z0-9]{4,8}$/.test(r || '');
+
+  LS.joinUrl = (room) => {
+    const u = new URL('live.html', location.href);
+    u.search = '';
+    u.searchParams.set('room', room);
+    if (LS.isDemo) u.searchParams.set('demo', '');
+    return u.toString().replace('demo=', 'demo');
+  };
+
+  LS.qr = (el, text, size) => {
+    el.innerHTML = '';
+    if (!window.QRCode) { el.textContent = text; return; }
+    new window.QRCode(el, { text, width: size, height: size, colorDark: '#111111', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
+  };
+
+  /* ---------- уроки ---------- */
+  LS.loadLesson = async (id, withTeacher) => {
+    if (!/^[a-z0-9_-]+$/i.test(id || '')) throw new Error('Некоректна назва уроку: ' + id);
+    const v = Math.floor(Date.now() / 60000); // оновлення кешу щохвилини
+    window.LESSON = null;
+    await LS.loadScript(`lessons/${id}/slides.js?v=${v}`);
+    if (withTeacher) {
+      window.TEACHER = {};
+      await LS.loadScript(`lessons/${id}/teacher.js?v=${v}`).catch(() => {});
+    }
+    if (!window.LESSON || !Array.isArray(window.LESSON.slides)) throw new Error('Урок «' + id + '» не знайдено');
+    return window.LESSON;
+  };
+
+  LS.stepCount = (s) => {
+    if (!s) return 0;
+    if (s.type === 'content') return s.reveal ? (s.items || []).length : 0;
+    if (s.type === 'vocab') return s.reveal === false ? 0 : 3;
+    return 0;
+  };
+
+  LS.isAnswerable = (s) => !!s && ['mcq', 'gap', 'open'].includes(s.type);
+
+  /* ---------- рендер ----------
+     ctx: { step, revealed, answer, results, mine, locked, interactive,
+            mode: 'phone'|'screen'|'preview', joinUrl, onRespond(v) }       */
+  const LETTERS = 'ABCDEFGH';
+
+  function statusLine(slide, ctx) {
+    if (!ctx.interactive || ctx.revealed) return '';
+    if (ctx.locked) return '<div class="s-status is-locked">🔒 Приймання відповідей закрито</div>';
+    if (ctx.mine != null) return '<div class="s-status is-sent">✓ Надіслано · можна змінити</div>';
+    const hint = slide.type === 'mcq' ? 'Оберіть варіант' : 'Надішліть відповідь';
+    return `<div class="s-status">${hint}</div>`;
+  }
+
+  LS.render = (slide, ctx) => {
+    ctx = Object.assign({ step: 99, mode: 'phone', interactive: false }, ctx || {});
+    ctx.canAnswer = ctx.interactive && !ctx.locked && !ctx.revealed;
+    const el = document.createElement('section');
+    el.className = `slide slide--${slide.type} mode-${ctx.mode}`;
+    const kicker = slide.kicker ? `<div class="s-kicker">${slide.kicker}</div>` : '';
+    const a = ctx.revealed ? ctx.answer || null : null;
+    const explain = a && a.explain ? `<div class="s-explain">${a.explain}</div>` : '';
+    let h = '';
+
+    switch (slide.type) {
+      case 'title': {
+        let join = '';
+        if (ctx.mode === 'screen' && ctx.joinUrl) join = '<div class="s-join"><div class="s-qr"></div><div class="s-join-url"></div></div>';
+        else if (ctx.mode === 'phone') join = '<div class="s-joined">✓ Ви підключені. Слайди змінюватимуться самі.</div>';
+        h = `${kicker}<h1 class="s-title">${slide.title || ''}</h1>${slide.subtitle ? `<p class="s-sub">${slide.subtitle}</p>` : ''}${join}`;
+        break;
+      }
+      case 'content': {
+        const items = slide.items || [];
+        const n = slide.reveal ? Math.min(ctx.step, items.length) : items.length;
+        const lis = items.slice(0, n).map((it, i) => `<li class="${slide.reveal && i === n - 1 ? 'is-new' : ''}">${it}</li>`).join('');
+        const left = slide.reveal && n < items.length ? `<div class="s-more">${'•'.repeat(items.length - n)}</div>` : '';
+        h = `${kicker}${slide.title ? `<h2 class="s-h">${slide.title}</h2>` : ''}<ul class="s-items">${lis}</ul>${left}`;
+        break;
+      }
+      case 'vocab': {
+        const st = slide.reveal === false ? 3 : ctx.step;
+        h = `${kicker}<div class="v-term">${slide.term || ''}</div>
+          <div class="v-meta">${slide.ipa ? `<span class="v-ipa">${slide.ipa}</span>` : ''}${slide.pos ? `<span class="v-pos">${slide.pos}</span>` : ''}</div>
+          ${st >= 1 && slide.def ? `<p class="v-def is-new">${slide.def}</p>` : ''}
+          ${st >= 2 && slide.example ? `<p class="v-ex is-new">${slide.example}</p>` : ''}
+          ${st >= 3 && slide.uk ? `<p class="v-uk is-new">${slide.uk}</p>` : ''}`;
+        break;
+      }
+      case 'mcq': {
+        const res = ctx.results;
+        const opts = (slide.options || []).map((o, i) => {
+          const cls = ['opt'];
+          if (ctx.mine === String(i)) cls.push('is-mine');
+          if (a && a.correct === i) cls.push('is-correct');
+          if (a && ctx.mine === String(i) && a.correct !== i) cls.push('is-wrong');
+          const pct = res && res.total ? Math.round((100 * ((res.counts || [])[i] || 0)) / res.total) : null;
+          return `<button type="button" class="${cls.join(' ')}" data-v="${i}"${ctx.canAnswer ? '' : ' disabled'}>` +
+            (pct !== null ? `<span class="opt-bar" style="width:${pct}%"></span>` : '') +
+            `<span class="opt-l">${LETTERS[i]}</span><span class="opt-t">${o}</span>` +
+            (pct !== null ? `<span class="opt-p">${pct}%</span>` : '') + '</button>';
+        }).join('');
+        const total = res && res.total ? `<div class="s-total">Відповіли: ${res.total}</div>` : '';
+        h = `${kicker}<div class="s-prompt">${slide.prompt || ''}</div><div class="opts">${opts}</div>${total}${statusLine(slide, ctx)}${explain}`;
+        break;
+      }
+      case 'gap': {
+        const blank = a
+          ? `<span class="blank is-filled">${LS.esc(a.text)}</span>`
+          : `<span class="blank${ctx.mine != null ? ' is-mine' : ''}">${ctx.mine != null ? LS.esc(ctx.mine) : '&nbsp;'}</span>`;
+        const sentence = (slide.prompt || '').replace('___', blank);
+        let verdict = '';
+        if (a && ctx.mine != null && ctx.mode !== 'preview') {
+          const ok = (a.accept || [a.text]).map(LS.norm).includes(LS.norm(ctx.mine));
+          verdict = ok
+            ? '<div class="verdict is-ok">✓ Ваша відповідь правильна</div>'
+            : `<div class="verdict is-no">Ваша відповідь: <b>${LS.esc(ctx.mine)}</b></div>`;
+        }
+        const form = ctx.canAnswer
+          ? `<form class="ans"><input class="ans-in" name="a" maxlength="80" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="${LS.esc(slide.placeholder || 'Ваша відповідь')}"><button class="ans-btn" type="submit">Надіслати</button></form>`
+          : '';
+        h = `${kicker}${slide.instruction ? `<p class="s-instr">${slide.instruction}</p>` : ''}<p class="s-sentence">${sentence}</p>${form}${statusLine(slide, ctx)}${verdict}${explain}`;
+        break;
+      }
+      case 'open': {
+        const form = ctx.canAnswer
+          ? `<form class="ans ans--open"><textarea class="ans-in" name="a" maxlength="300" rows="3" placeholder="${LS.esc(slide.placeholder || 'Ваша відповідь')}"></textarea><button class="ans-btn" type="submit">Надіслати</button></form>`
+          : '';
+        const mine = ctx.mine != null && ctx.mode !== 'preview' ? `<div class="mine"><span>Ваша відповідь</span>${LS.esc(ctx.mine)}</div>` : '';
+        h = `${kicker}<div class="s-prompt">${slide.prompt || ''}</div>${form}${mine}${statusLine(slide, ctx)}${explain}`;
+        break;
+      }
+      case 'end':
+      default:
+        h = `${kicker}<h1 class="s-title">${slide.title || ''}</h1>${slide.text ? `<p class="s-sub">${slide.text}</p>` : ''}`;
+    }
+
+    el.innerHTML = h;
+
+    if (slide.type === 'title' && ctx.mode === 'screen' && ctx.joinUrl) {
+      LS.qr(el.querySelector('.s-qr'), ctx.joinUrl, 240);
+      el.querySelector('.s-join-url').textContent = ctx.joinUrl.replace(/^https?:\/\//, '');
+    }
+
+    if (ctx.canAnswer && ctx.onRespond) {
+      el.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => ctx.onRespond(b.dataset.v)));
+      const f = el.querySelector('form.ans');
+      if (f) {
+        const inp = f.querySelector('.ans-in');
+        f.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const v = inp.value.trim();
+          if (v) { ctx.onRespond(v); inp.blur(); }
+        });
+        if (inp.tagName === 'TEXTAREA') inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) f.requestSubmit();
+        });
+      }
+    }
+    return el;
+  };
+
+  /* =======================================================================
+     ТРАНСПОРТ 1: Firebase Realtime Database
+     ======================================================================= */
+  const FB_VER = '10.12.2';
+  let fbReady = null;
+
+  function fbInit() {
+    if (fbReady) return fbReady;
+    fbReady = (async () => {
+      const cfg = window.FIREBASE_CONFIG;
+      if (!cfg || !cfg.apiKey || /ВСТАВТЕ|YOUR_/.test(cfg.apiKey) || !cfg.databaseURL) {
+        throw new Error('Не заповнено firebase-config.js. Для перевірки без Firebase додайте до адреси ?demo');
+      }
+      const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+      await LS.loadScript(base + 'firebase-app-compat.js');
+      await Promise.all([LS.loadScript(base + 'firebase-auth-compat.js'), LS.loadScript(base + 'firebase-database-compat.js')]);
+      firebase.initializeApp(cfg);
+      return { db: firebase.database(), auth: firebase.auth() };
+    })();
+    return fbReady;
+  }
+
+  const waitUser = (auth) => new Promise((r) => { const un = auth.onAuthStateChanged((u) => { un(); r(u); }); });
+
+  async function fbTeacher(room) {
+    const { db, auth } = await fbInit();
+    const base = db.ref('rooms/' + room);
+    let respRef = null;
+    return {
+      kind: 'firebase',
+      waitUser: () => waitUser(auth),
+      signIn: () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then((r) => r.user),
+      signOut: () => auth.signOut(),
+      setState: (s) => base.child('state').set(s),
+      onPresence: (cb) => base.child('presence').on('value', (s) => cb(s.numChildren()), (e) => console.warn(e)),
+      watchResponses(slideId, cb) {
+        if (respRef) respRef.off();
+        respRef = base.child('responses/' + slideId);
+        respRef.on('value', (s) => cb(s.val() || {}), (e) => console.warn(e));
+      },
+      clearResponses: (slideId) => base.child('responses/' + slideId).remove(),
+      clearRoom: () => base.remove(),
+      onConnection: (cb) => db.ref('.info/connected').on('value', (s) => cb(!!s.val())),
+    };
+  }
+
+  async function fbStudent(room, opts) {
+    const { db, auth } = await fbInit();
+    let uid = null;
+    if (!opts.screen) {
+      let u = await waitUser(auth);
+      if (!u) u = (await auth.signInAnonymously()).user;
+      uid = u.uid;
+    }
+    const base = db.ref('rooms/' + room);
+    return {
+      kind: 'firebase',
+      uid,
+      onState: (cb) => base.child('state').on('value', (s) => cb(s.val()), (e) => console.warn(e)),
+      startPresence() {
+        if (!uid) return;
+        const me = base.child('presence/' + uid);
+        db.ref('.info/connected').on('value', (s) => {
+          if (s.val()) me.onDisconnect().remove().then(() => me.set(true)).catch((e) => console.warn(e));
+        });
+      },
+      respond: (slideId, v) => base.child(`responses/${slideId}/${uid}`).set({ v, t: firebase.database.ServerValue.TIMESTAMP }),
+      onConnection: (cb) => db.ref('.info/connected').on('value', (s) => cb(!!s.val())),
+    };
+  }
+
+  /* =======================================================================
+     ТРАНСПОРТ 2: демо (BroadcastChannel) — вкладки одного браузера
+     ======================================================================= */
+  function demoTeacher(room) {
+    const bc = new BroadcastChannel('ls-' + room);
+    let state = null, presCb = null, respCb = null, watched = null;
+    const seen = {}, resp = {};
+    bc.onmessage = (e) => {
+      const m = e.data || {};
+      if (m.k === 'hello') {
+        if (!m.screen) seen[m.cid] = Date.now();
+        if (state) bc.postMessage({ k: 'state', s: state });
+      } else if (m.k === 'bye') {
+        delete seen[m.cid];
+      } else if (m.k === 'resp') {
+        // ті самі обмеження, що й у правилах Firebase
+        if (!state || state.slideId !== m.slideId || state.locked || state.revealed) return;
+        (resp[m.slideId] = resp[m.slideId] || {})[m.cid] = { v: String(m.v).slice(0, 300), t: Date.now() };
+        if (watched === m.slideId && respCb) respCb(Object.assign({}, resp[m.slideId]));
+      }
+    };
+    setInterval(() => {
+      const now = Date.now();
+      let n = 0;
+      for (const k in seen) { if (now - seen[k] < 12000) n++; else delete seen[k]; }
+      if (presCb) presCb(n);
+    }, 1000);
+    return {
+      kind: 'demo',
+      waitUser: async () => ({ email: 'демо-режим', demo: true }),
+      signIn: async () => ({ email: 'демо-режим', demo: true }),
+      signOut: async () => {},
+      setState: async (s) => { state = JSON.parse(JSON.stringify(s)); bc.postMessage({ k: 'state', s: state }); },
+      onPresence: (cb) => { presCb = cb; },
+      watchResponses: (id, cb) => { watched = id; respCb = cb; cb(Object.assign({}, resp[id] || {})); },
+      clearResponses: async (id) => { delete resp[id]; if (watched === id && respCb) respCb({}); },
+      clearRoom: async () => { for (const k in resp) delete resp[k]; },
+      onConnection: (cb) => cb(true),
+    };
+  }
+
+  function demoStudent(room, opts) {
+    const bc = new BroadcastChannel('ls-' + room);
+    let cid;
+    try {
+      cid = sessionStorage.getItem('ls-cid');
+      if (!cid) { cid = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('ls-cid', cid); }
+    } catch (e) { cid = Math.random().toString(36).slice(2, 10); }
+    let stateCb = null;
+    bc.onmessage = (e) => { const m = e.data || {}; if (m.k === 'state' && stateCb) stateCb(m.s); };
+    const hello = () => bc.postMessage({ k: 'hello', cid, screen: !!opts.screen });
+    return {
+      kind: 'demo',
+      uid: cid,
+      onState: (cb) => { stateCb = cb; hello(); },
+      startPresence: () => {
+        setInterval(hello, 4000);
+        addEventListener('pagehide', () => bc.postMessage({ k: 'bye', cid }));
+      },
+      respond: async (slideId, v) => bc.postMessage({ k: 'resp', slideId, cid, v }),
+      onConnection: (cb) => cb(true),
+    };
+  }
+
+  LS.teacherTransport = (room) => (LS.isDemo ? Promise.resolve(demoTeacher(room)) : fbTeacher(room));
+  LS.studentTransport = (room, opts) => (LS.isDemo ? Promise.resolve(demoStudent(room, opts || {})) : fbStudent(room, opts || {}));
+})();

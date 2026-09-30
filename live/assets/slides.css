@@ -1,0 +1,164 @@
+/* =========================================================================
+   Live Slides — оформлення слайдів (спільне для телефона, екрана й пульта)
+   ========================================================================= */
+:root {
+  --bg: #f6f4ef;
+  --surface: #ffffff;
+  --surface-2: #efece4;
+  --ink: #1d1f24;
+  --ink-2: #555a63;
+  --line: #dcd7cc;
+  --accent: #2f5bd3;
+  --accent-soft: #e3eafc;
+  --ok: #1f8a4c;
+  --ok-soft: #dcf3e5;
+  --no: #c2412d;
+  --no-soft: #fbe3de;
+  --warn: #9a6a00;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14161a; --surface: #1d2026; --surface-2: #262a32; --ink: #eef0f3; --ink-2: #a3a9b4;
+    --line: #333844; --accent: #7fa2ff; --accent-soft: #232f4d; --ok: #4fcf86; --ok-soft: #173826;
+    --no: #ff8a75; --no-soft: #3f1f1a; --warn: #f0c060;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14161a; --surface: #1d2026; --surface-2: #262a32; --ink: #eef0f3; --ink-2: #a3a9b4;
+  --line: #333844; --accent: #7fa2ff; --accent-soft: #232f4d; --ok: #4fcf86; --ok-soft: #173826;
+  --no: #ff8a75; --no-soft: #3f1f1a; --warn: #f0c060;
+}
+
+/* ---------- базова структура слайда ---------- */
+.slide {
+  box-sizing: border-box;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 28px 22px 32px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 20px;
+  line-height: 1.45;
+}
+.slide *, .slide *::before, .slide *::after { box-sizing: border-box; }
+.slide b, .slide strong { font-weight: 700; }
+.slide .muted { color: var(--ink-2); }
+
+.s-kicker {
+  font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent);
+}
+.s-title { font-family: var(--serif); font-size: 40px; line-height: 1.1; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+.s-sub { font-size: 20px; color: var(--ink-2); margin: 0; }
+.s-h { font-family: var(--serif); font-size: 28px; line-height: 1.2; margin: 0; }
+.s-prompt { font-size: 23px; line-height: 1.4; font-weight: 500; }
+.s-instr { font-size: 16px; color: var(--ink-2); margin: 0; }
+
+/* Поява нового кроку */
+.is-new { animation: ls-in .35s ease-out both; }
+@keyframes ls-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .is-new { animation: none; } }
+
+/* ---------- title ---------- */
+.slide--title, .slide--end { justify-content: center; }
+.s-joined {
+  margin-top: 12px; padding: 14px 16px; border-radius: 14px;
+  background: var(--ok-soft); color: var(--ok); font-size: 16px; font-weight: 600;
+}
+.s-join { display: flex; gap: 24px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+.s-qr { background: #fff; padding: 12px; border-radius: 16px; line-height: 0; }
+.s-join-url { font-size: 22px; font-weight: 600; word-break: break-all; }
+
+/* ---------- content ---------- */
+.s-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.s-items li {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 16px 18px; font-size: 21px;
+}
+.s-more { color: var(--ink-2); letter-spacing: .3em; font-size: 18px; text-align: center; }
+
+/* ---------- vocab ---------- */
+.v-term { font-family: var(--serif); font-size: 48px; line-height: 1.05; font-weight: 700; }
+.v-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.v-ipa { font-size: 22px; color: var(--ink-2); font-family: "Charis SIL", "Doulos SIL", "Lucida Sans Unicode", var(--sans); }
+.v-pos { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
+.v-def { margin: 0; font-size: 21px; }
+.v-ex { margin: 0; font-size: 20px; font-style: italic; padding-left: 14px; border-left: 3px solid var(--accent); }
+.v-uk { margin: 0; font-size: 19px; color: var(--ink-2); background: var(--surface-2); padding: 12px 14px; border-radius: 12px; }
+
+/* ---------- mcq ---------- */
+.opts { display: flex; flex-direction: column; gap: 12px; }
+.opt {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px;
+  width: 100%; min-height: 60px; padding: 12px 16px; text-align: left;
+  font: inherit; font-size: 19px; line-height: 1.35; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--line); border-radius: 16px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color .15s, background .15s;
+}
+.opt:disabled { cursor: default; }
+.opt:not(:disabled):active { transform: scale(.99); }
+.opt-l {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; font-size: 16px; background: var(--surface-2); color: var(--ink-2); position: relative;
+}
+.opt-t { flex: 1; position: relative; }
+.opt-p { position: relative; font-weight: 700; font-size: 16px; color: var(--ink-2); }
+.opt-bar { position: absolute; inset: 0 auto 0 0; background: var(--accent-soft); transition: width .4s ease; }
+.opt.is-mine { border-color: var(--accent); }
+.opt.is-mine .opt-l { background: var(--accent); color: #fff; }
+.opt.is-correct { border-color: var(--ok); background: var(--ok-soft); }
+.opt.is-correct .opt-l { background: var(--ok); color: #fff; }
+.opt.is-wrong { border-color: var(--no); background: var(--no-soft); }
+.opt.is-wrong .opt-l { background: var(--no); color: #fff; }
+.s-total { font-size: 14px; color: var(--ink-2); text-align: right; }
+
+/* ---------- gap / open ---------- */
+.s-sentence { margin: 0; font-size: 24px; line-height: 1.6; }
+.blank {
+  display: inline-block; min-width: 4.5em; padding: 0 .3em; border-bottom: 3px solid var(--accent);
+  text-align: center; font-weight: 700; line-height: 1.3;
+}
+.blank.is-mine { color: var(--accent); }
+.blank.is-filled { color: var(--ok); border-color: var(--ok); }
+.ans { display: flex; gap: 10px; }
+.ans--open { flex-direction: column; }
+.ans-in {
+  flex: 1; min-width: 0; font: inherit; font-size: 19px; color: var(--ink); background: var(--surface);
+  border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px; resize: none;
+}
+.ans-in:focus { outline: none; border-color: var(--accent); }
+.ans-btn {
+  flex: none; min-height: 52px; padding: 0 20px; font: inherit; font-size: 17px; font-weight: 700;
+  color: #fff; background: var(--accent); border: 0; border-radius: 14px; cursor: pointer;
+}
+.mine { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 18px; }
+.mine span { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); margin-bottom: 4px; }
+
+.s-status { font-size: 15px; color: var(--ink-2); text-align: center; }
+.s-status.is-sent { color: var(--ok); font-weight: 600; }
+.s-status.is-locked { color: var(--warn); font-weight: 600; }
+.verdict { font-size: 17px; font-weight: 600; padding: 12px 14px; border-radius: 12px; }
+.verdict.is-ok { background: var(--ok-soft); color: var(--ok); }
+.verdict.is-no { background: var(--surface-2); color: var(--ink); font-weight: 500; }
+.s-explain {
+  font-size: 17px; line-height: 1.5; background: var(--surface-2); border-radius: 14px; padding: 14px 16px;
+  animation: ls-in .35s ease-out both;
+}
+
+/* ---------- режим екрана аудиторії (проєктор) ---------- */
+.slide.mode-screen { max-width: 1100px; margin: 0 auto; padding: 5vh 6vw; font-size: clamp(22px, 2.2vw, 34px); gap: 2.4vh; }
+.mode-screen .s-title { font-size: clamp(48px, 6vw, 96px); }
+.mode-screen .s-sub { font-size: clamp(22px, 2.4vw, 36px); }
+.mode-screen .s-h { font-size: clamp(34px, 3.6vw, 58px); }
+.mode-screen .s-kicker { font-size: clamp(14px, 1.2vw, 20px); }
+.mode-screen .s-items li, .mode-screen .opt, .mode-screen .s-prompt, .mode-screen .s-sentence { font-size: clamp(22px, 2.3vw, 36px); }
+.mode-screen .v-term { font-size: clamp(56px, 7vw, 110px); }
+.mode-screen .v-def, .mode-screen .v-ex, .mode-screen .v-uk, .mode-screen .v-ipa { font-size: clamp(22px, 2.3vw, 36px); }
+.mode-screen .opts { display: grid; grid-template-columns: 1fr 1fr; }
+.mode-screen .opt { min-height: 9vh; }
+.mode-screen .s-explain { font-size: clamp(18px, 1.8vw, 28px); }

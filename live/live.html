@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>Заняття наживо</title>
+<link rel="stylesheet" href="assets/slides.css">
+<style>
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+  .app { display: flex; flex-direction: column; height: 100dvh; max-width: 560px; margin: 0 auto; }
+
+  .lbar {
+    flex: none; display: flex; align-items: center; gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    font-size: 14px; color: var(--ink-2); border-bottom: 1px solid var(--line);
+  }
+  .l-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .l-pos { font-variant-numeric: tabular-nums; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--no); flex: none; }
+  .dot.on { background: var(--ok); }
+
+  .view { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .view .slide { min-height: 100%; }
+
+  .lnav {
+    flex: none; display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
+  }
+  .lnav button {
+    font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 12px; min-height: 44px; cursor: pointer;
+  }
+  .lnav .arr { width: 52px; font-size: 22px; }
+  .lnav button:disabled { opacity: .35; }
+  #bLive { flex: 1; }
+  #bLive.is-live { background: transparent; border-color: transparent; color: var(--ok); }
+  #bLive.is-behind { background: var(--accent); color: #fff; border-color: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .8; } }
+
+  .cover {
+    position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; text-align: center;
+    background: var(--bg); padding: 24px;
+  }
+  .cover[hidden] { display: none; }
+  .cover .big { font-size: 64px; line-height: 1; }
+  .cover p { font-size: 20px; margin: 14px 0 0; }
+  .cover small { display: block; color: var(--ink-2); margin-top: 8px; font-size: 15px; }
+  #blackout { background: #000; color: #eee; }
+
+  .joinform { display: flex; flex-direction: column; gap: 14px; width: min(340px, 100%); }
+  .joinform h1 { font-family: var(--serif); font-size: 32px; margin: 0 0 6px; }
+  .joinform input {
+    font: inherit; font-size: 32px; text-align: center; letter-spacing: .3em; text-transform: uppercase;
+    padding: 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .joinform button { font: inherit; font-size: 18px; font-weight: 700; min-height: 54px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; }
+  .err { color: var(--no); }
+
+  /* ---- екран аудиторії (проєктор): ?view=screen ---- */
+  body.screen .app { max-width: none; }
+  body.screen .lnav { display: none; }
+  body.screen .lbar { font-size: 18px; padding: 14px 28px; }
+  body.screen .view { display: flex; align-items: center; }
+  body.screen .view .slide { width: 100%; min-height: auto; }
+  .roomtag { font-weight: 700; color: var(--ink); letter-spacing: .08em; }
+</style>
+<script src="firebase-config.js"></script>
+<script src="assets/qrcode.min.js"></script>
+<script src="assets/core.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="lbar">
+    <span class="l-title" id="lt">Підключення…</span>
+    <span class="l-pos" id="lp"></span>
+    <span class="dot" id="conn" title="З'єднання"></span>
+  </header>
+  <main class="view" id="view" aria-live="polite"></main>
+  <nav class="lnav" id="nav">
+    <button class="arr" id="bPrev" aria-label="Попередній слайд">‹</button>
+    <button id="bLive" class="is-live">● Наживо</button>
+    <button class="arr" id="bNext" aria-label="Наступний слайд">›</button>
+  </nav>
+</div>
+
+<div class="cover" id="blackout" hidden><div><div class="big">👀</div><p>Подивіться на викладача</p></div></div>
+<div class="cover" id="wait" hidden><div><div class="big">⏳</div><p id="waitMsg">Підключення до заняття…</p><small id="waitSub"></small></div></div>
+<div class="cover" id="join" hidden>
+  <form class="joinform" id="joinForm">
+    <h1>Заняття наживо</h1>
+    <label for="code">Введіть код кімнати з екрана</label>
+    <input id="code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" required>
+    <button type="submit">Приєднатися</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const room = (LS.params.get('room') || '').toUpperCase();
+  const isScreen = LS.params.get('view') === 'screen';
+  if (isScreen) document.body.classList.add('screen');
+
+  /* ---- без коду кімнати: форма входу ---- */
+  if (!LS.validRoom(room)) {
+    $('join').hidden = false;
+    $('joinForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const c = $('code').value.trim().toUpperCase();
+      if (!LS.validRoom(c)) { $('code').focus(); return; }
+      const u = new URL(location.href);
+      u.searchParams.set('room', c);
+      location.href = u.toString();
+    });
+    return;
+  }
+
+  const KEY = 'ls-mine-' + room, AKEY = 'ls-ans-' + room;
+  const mine = LS.store.get(KEY) || {};       // мої відповіді: slideId → значення
+  const answers = LS.store.get(AKEY) || {};   // відкриті ключі: slideId → answer
+  let T = null, state = null, lessonId = null, viewIdx = null, loading = false;
+
+  const wait = (msg, sub) => { $('wait').hidden = false; $('waitMsg').textContent = msg; $('waitSub').textContent = sub || ''; };
+  wait('Підключення до кімнати ' + room + '…');
+
+  /* ---- не давати екрану згаснути ---- */
+  let lock = null;
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator && document.visibilityState === 'visible' && !lock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } } catch (e) { /* не критично */ }
+  }
+  document.addEventListener('visibilitychange', keepAwake);
+  document.addEventListener('pointerdown', keepAwake, { once: true });
+  keepAwake();
+
+  function render() {
+    if (!state || !window.LESSON || lessonId !== state.lesson) return;
+    const slides = LESSON.slides;
+    const live = Math.min(state.slide || 0, slides.length - 1);
+    if (viewIdx !== null && viewIdx >= live) viewIdx = null;
+    const idx = viewIdx === null ? live : viewIdx;
+    const slide = slides[idx];
+    const isLive = idx === live;
+
+    if (isLive && state.revealed && state.answer) { answers[slide.id] = state.answer; LS.store.set(AKEY, answers); }
+
+    // зберегти незавершений текст у полі
+    const view = $('view');
+    const old = view.querySelector('.ans-in');
+    const draft = old && view.dataset.slide === slide.id ? old.value : '';
+    const hadFocus = old && document.activeElement === old;
+    const scroll = view.dataset.slide === slide.id ? view.scrollTop : 0;
+
+    const ctx = isLive
+      ? { step: state.step || 0, revealed: !!state.revealed, answer: state.answer || null,
+          results: state.shared ? state.results : null, locked: !!state.locked }
+      : { step: 99, revealed: !!answers[slide.id], answer: answers[slide.id] || null, results: null, locked: true };
+    Object.assign(ctx, {
+      mode: isScreen ? 'screen' : 'phone',
+      interactive: !isScreen && isLive,
+      mine: isScreen ? null : (mine[slide.id] != null ? mine[slide.id] : null),
+      joinUrl: LS.joinUrl(room),
+      onRespond: (v) => respond(slide.id, v),
+    });
+    if (isScreen) ctx.results = isLive && state.shared ? state.results : null;
+
+    const el = LS.render(slide, ctx);
+    view.replaceChildren(el);
+    view.dataset.slide = slide.id;
+    view.scrollTop = scroll;
+    const inp = view.querySelector('.ans-in');
+    if (inp && draft) inp.value = draft;
+    if (inp && hadFocus) inp.focus();
+
+    $('lt').textContent = LESSON.title || 'Заняття';
+    $('lp').innerHTML = (isScreen ? `<span class="roomtag">${room}</span> · ` : '') + `${idx + 1}/${slides.length}`;
+    $('blackout').hidden = !state.blackout;
+
+    // навігація
+    $('bPrev').disabled = idx === 0;
+    $('bNext').disabled = idx >= live;
+    const b = $('bLive');
+    if (isLive) { b.className = 'is-live'; b.textContent = '● Наживо'; }
+    else { b.className = 'is-behind'; b.textContent = `● Наживо: слайд ${live + 1} →`; }
+  }
+
+  async function respond(slideId, v) {
+    mine[slideId] = v; LS.store.set(KEY, mine);
+    render();
+    try { await T.respond(slideId, v); }
+    catch (e) { console.warn(e); delete mine[slideId]; LS.store.set(KEY, mine); render(); alert('Відповідь не надіслано: приймання вже закрито або немає з\'єднання.'); }
+  }
+
+  async function onState(s) {
+    if (!s) { wait('Кімнату ' + room + ' ще не відкрито', 'Зачекайте, поки викладач почне заняття'); state = null; return; }
+    const prevSlide = state ? state.slide : null;
+    state = s;
+    if (lessonId !== s.lesson && !loading) {
+      loading = true;
+      try { await LS.loadLesson(s.lesson, false); lessonId = s.lesson; }
+      catch (e) { wait('Не вдалося завантажити урок', e.message); loading = false; return; }
+      loading = false;
+    }
+    $('wait').hidden = true;
+    if (prevSlide !== null && prevSlide !== s.slide && viewIdx === null) $('view').scrollTop = 0;
+    render();
+  }
+
+  /* ---- навігація: кнопки та свайпи ---- */
+  const liveIdx = () => (state ? state.slide || 0 : 0);
+  const cur = () => (viewIdx === null ? liveIdx() : viewIdx);
+  $('bPrev').onclick = () => { if (cur() > 0) { viewIdx = cur() - 1; $('view').scrollTop = 0; render(); } };
+  $('bNext').onclick = () => { const n = cur() + 1; viewIdx = n >= liveIdx() ? null : n; $('view').scrollTop = 0; render(); };
+  $('bLive').onclick = () => { if (viewIdx !== null) { viewIdx = null; $('view').scrollTop = 0; render(); } };
+  let tx = null, ty = null;
+  $('view').addEventListener('touchstart', (e) => { if (e.target.closest('input,textarea')) return; tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  $('view').addEventListener('touchend', (e) => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    tx = null;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) (dx > 0 ? $('bPrev') : $('bNext')).click();
+  }, { passive: true });
+
+  /* ---- старт ---- */
+  (async () => {
+    try {
+      T = await LS.studentTransport(room, { screen: isScreen });
+      T.onConnection((on) => { $('conn').classList.toggle('on', on); });
+      T.onState(onState);
+      if (!isScreen) T.startPresence();
+    } catch (e) {
+      console.error(e);
+      wait('Не вдалося підключитися', e.message);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
