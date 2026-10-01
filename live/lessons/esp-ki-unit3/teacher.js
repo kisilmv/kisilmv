@@ -16,9 +16,7 @@
   });
   const MC = (correct, explain, notes) => ({ notes: notes || '', answer: { correct, explain } });
 
-  /* ===================== ЧАСТИНА 1 ===================== */
   T.title = V(
-    '<p><b>Частина 1 ≈ 80 хв:</b> Lead-in (10) · правило 1 + 3.1 (20) · правило 2 + 3.2 (15) · правило 3 + 3.3 (15) · правило 4 + 3.4 (15) · запас 5.</p>' +
     '<p>Поки студенти підключаються, QR на екрані (Q). Починайте, коли лічильник 👥 показує майже всю групу.</p>' +
     '<p>Нагадати: телефон сам перемикає слайди; кнопка «Наживо» повертає до поточного, якщо хтось погортав назад.</p>');
 
@@ -173,20 +171,14 @@
     T['e34_' + (i + 1)] = MC(e[0], '✅ ' + e[1],
       (i === 0 ? '<p>Студент торкається хибної частини. Після <b>R</b> на телефонах з’являється виправлене речення. Просіть одного студента не лише виправити, а й <b>назвати причину</b> помилки: усвідомлення джерела інтерференції запобігає її повторенню.</p>' : '') +
       '<p>' + e[1] + '</p>' + tr(e[2]) + '<p><b>Джерело помилки:</b> ' + e[3] + '.</p>' +
-      (i === 4 ? '<p>Пункти 5, 6 і 8 перевіряють термінологічні пастки, які детально розбираються лише в частині 2. Коментар після R тут обов’язковий; повернетеся до них у 3.5.</p>' : ''));
+      (i === 4 ? '<p>Пункти 5, 6 і 8 перевіряють термінологічні пастки, які детально розбираються далі, у розділі Vocabulary. Коментар після R тут обов’язковий; повернетеся до них у 3.5.</p>' : ''));
   });
   T.e34_fix = { notes:
     '<p>Письмове закріплення (1–2 хв). Прочитайте 4–5 відповідей; перевіряйте, чи студент виправив саме помилку, а не переписав речення інакше.</p>' +
     tr('Оберіть одне речення з 3.4 і запишіть його правильно.'),
     answer: { text: '', explain: 'e.g. <i>The image <b>is verified</b> by the bootloader before every start.</i> · <i>Take a charger in case the battery <b>dies</b>.</i>' } };
 
-  T.p1end = V('<p>Кінець частини 1. Домашнє: 3.2–3.3 — записати повні речення; прочитати текст до наступної пари не обов’язково.</p>' +
-    tr('Частина 1 завершена. Наступного разу: лексика, історія «Вояджера-1» і ваш план оновлення.'));
-
-  /* ===================== ЧАСТИНА 2 ===================== */
-  T.v0 = V('<p><b>Частина 2 ≈ 80 хв:</b> Vocabulary + пастки + 3.5 (22) · Reading + 3.6–3.7 (25) · 3.8 (8) · Dialogues + 3.9 (12) · 3.10 вибірково (8) · 3.11 підготовка (5).</p>' +
-    '<p><b>Нова пара — нова кімната:</b> клацніть цей слайд у списку ліворуч і покажіть новий QR (Q).</p>' +
-    '<p><b>Реалістично:</b> самі виступи 3.11 (по 2 хв на студента) у цю пару не вмістяться. Варіанти: (а) підготовка вдома, виступи на початку наступної пари; (б) у 3.10 лише 1, 3, 4, 6, 8, 11, 13, а звільнений час — на 3–4 виступи.</p>' +
+  T.v0 = V('<p>Перехід до лексики: чотири тематичні групи, далі термінологічні пастки й 3.5.</p>' +
     tr('Слова про оновлення. Американський правопис і вимова, як у галузевій документації.'));
 
   const VOC = '<p>Прочитайте терміни вголос, студенти повторюють хором лише складні (bootloader, partition, integrity, vulnerability). Один студент дає приклад речення з одним терміном.</p>';
@@ -305,7 +297,7 @@
     'Прийменник після <i>roll back</i> — <i>to</i>, не <i>on</i> чи <i>at</i>. Приймається <i>to the previous version</i>.',
     'Типові помилки: <i>by small groups</i>, <i>all in once</i>. Приймається <i>group by group rather than all at once</i>.'
   ];
-  N38.forEach((n, i) => { T['k' + (i + 1)] = V('<p>' + n + '</p>' + (i === 5 ? '<p>Домашнє: відтворити всі шість речень за ключовими словами, без підглядання, з аудіозаписом.</p>' : '')); });
+  N38.forEach((n, i) => { T['k' + (i + 1)] = V('<p>' + n + '</p>' + (i === 5 ? '<p>Завершальний крок за бажанням: відтворити всі шість речень за ключовими словами без підглядання.</p>' : '')); });
 
   /* ---------- Dialogues ---------- */
   T.d1a = V('<p>Прочитайте діалог за ролями з одним сильним студентом (ви — Оксана). Потім запитання: <i>What went wrong on the test rack?</i></p>' +
@@ -352,8 +344,7 @@
     '<i>put on hold</i>; приймається <i>We’re stopping the rollout for now</i>, але краще цільовий вираз з діалогу 1.',
     '<i>upgrade</i>, не <i>update</i>: це перехід на нову версію.'
   ];
-  N310.forEach((n, i) => { T['e310_' + (i + 1)] = V('<p>Один студент перекладає вголос → відкрити еталон (→) → студент повторює еталон.</p><p>' + n + '</p>' +
-    (i === 0 ? '<p>Якщо бракує часу, зробіть 1, 3, 4, 6, 8, 11, 13, решту — вдома.</p>' : '')); });
+  N310.forEach((n, i) => { T['e310_' + (i + 1)] = V('<p>Один студент перекладає вголос → відкрити еталон (→) → студент повторює еталон.</p><p>' + n + '</p>'); });
 
   /* ---------- 3.11 ---------- */
   T.sp1 = V('<p>Двохвилинний брифінг для нетехнічного керівника: як оновлення для вашого продукту буде безпечно доставлено. Виступає <b>один студент</b>; група слухає з чеклистом (слайд «While you listen»).</p>' +
@@ -395,8 +386,7 @@
   ]) + '<p><b>Модель (water meters)</b> — показуйте <b>після</b> перших виступів, щоб студенти не відтворювали її дослівно:</p>' +
     '<p class="muted">Here’s how the update for our fifty thousand water meters would work. First, the new firmware image is signed by our team with a private key and uploaded to the update server. The meters don’t download it all at once: each one picks it up during its normal night-time connection. Once the download is complete, the bootloader verifies the signature, so an image that someone has tampered with is simply rejected. The meter then reboots into the new version, but the old version is kept on a separate partition in case the new one fails. If a meter freezes, the watchdog timer resets it and the bootloader rolls back automatically, so a failed update can’t turn a meter into a brick. Because the meters run on batteries, the update starts only if the charge is above a safe level; that prevents the device from losing power halfway through. As for the schedule, I’d start with one percent of the fleet, about five hundred meters. Once they have sent normal readings for three days, we move to ten percent, and then to everyone. If more than one meter in a thousand stops reporting, the rollout is put on hold. The worst case, then, is a delay of a few days, not a technician visiting every apartment.</p>');
 
-  T.end = V('<p>Виріб завершено лише тоді, коли вимкнуто останній його примірник. А доти — невеликі групи й завжди шлях назад.</p>' +
-    '<p>Домашнє: підготувати брифінг 3.11 (2 хв); відтворити шість речень 3.8 з аудіозаписом.</p>');
+  T.end = V('<p>Виріб завершено лише тоді, коли вимкнуто останній його примірник. А доти — невеликі групи й завжди шлях назад.</p>');
 
   window.TEACHER = T;
 })();

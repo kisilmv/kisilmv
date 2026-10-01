@@ -2,8 +2,8 @@
    Unit 3 · Over-the-Air Updates: Changing Code in the Field
    ESP · Комп'ютерна інженерія · B1
    ПУБЛІЧНА частина: те, що бачать студенти. Нотатки й ключі — у teacher.js.
-   Частина 1 (≈80 хв): Lead-in + Grammar (3.1–3.4)
-   Частина 2 (≈80 хв): Vocabulary (3.5) · Reading (3.6–3.8) · Dialogues (3.9) · 3.10 · Speaking (3.11)
+   Безперервна презентація: Lead-in · Grammar (3.1–3.4) · Vocabulary (3.5) ·
+   Reading (3.6–3.8) · Dialogues (3.9) · 3.10 · Speaking (3.11)
    ========================================================================= */
 (function () {
   const K = (s) => '<span class="muted">' + s + '</span>';
@@ -14,7 +14,6 @@
   const S = [];
   const add = (o) => S.push(o);
 
-  /* ===================== ЧАСТИНА 1 ===================== */
   add({ id: 'title', type: 'title',
     kicker: 'Unit 3 · English for Computer Engineering',
     title: 'Over-the-Air Updates',
@@ -173,12 +172,7 @@
     prompt: 'Choose <b>one</b> sentence from 3.4 and write it <b>correctly</b>.',
     placeholder: 'The image is…' });
 
-  add({ id: 'p1end', type: 'end', kicker: 'End of Part 1',
-    title: 'Part 1: done',
-    text: 'Next time: vocabulary, the Voyager 1 story and your update plan.' });
-
-  /* ===================== ЧАСТИНА 2 ===================== */
-  add({ id: 'v0', type: 'end', kicker: 'Part 2 · Vocabulary',
+  add({ id: 'v0', type: 'end', kicker: 'Vocabulary',
     title: 'Words for updates',
     text: 'American spelling and pronunciation, as in industry documentation.' });
 
