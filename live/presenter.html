@@ -68,6 +68,18 @@
   .rlist li.ok { background: var(--ok-soft); }
   .rlist .cnt { font-weight: 700; min-width: 2em; font-variant-numeric: tabular-nums; }
   .empty { color: var(--ink-2); font-size: 14px; }
+  .rlist li { align-items: flex-start; }
+  .rlist .who { font-weight: 700; font-size: 14px; color: var(--ink-2); min-width: 7.5em; max-width: 9em; flex: none; overflow-wrap: anywhere; }
+  .rlist .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .rlist li.no { background: var(--no-soft); }
+  .rlist li.onwall { outline: 2px solid var(--accent); }
+  .rlist .names { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .wbtn { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 3px 9px; font-size: 13px; font-weight: 700; }
+  .wbtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .rnames { font-size: 13px; color: var(--ink-2); margin: -2px 0 8px 34px; line-height: 1.4; }
+  .missing { margin-top: 10px; font-size: 14px; line-height: 1.5; }
+  .missing b { color: var(--warn); }
+  .wallinfo { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 
   /* ---- нижня панель ---- */
   .bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--line); background: var(--surface); align-items: center; }
@@ -126,6 +138,7 @@
     <div class="panel"><h3>Нотатки</h3><div id="notes"></div></div>
     <div class="panel" id="keyPanel"><h3>Ключ</h3><div id="key"></div></div>
     <div class="panel" id="respPanel"><h3><span>Відповіді</span><span id="respCount"></span></h3><div id="resp"></div></div>
+    <div class="panel"><h3><span>Учасники</span><span id="rosterCount"></span></h3><div id="roster" class="missing"></div></div>
   </section>
 </main>
 
@@ -138,6 +151,7 @@
   <button id="bBlack" title="Притемнити телефони: «Подивіться на викладача»">Пауза <kbd>B</kbd></button>
   <span class="sp"></span>
   <button id="bClear" title="Стерти відповіді на цьому слайді">Очистити</button>
+  <button id="bReport" title="Завантажити таблицю: хто що відповів на кожен слайд">Звіт ⬇</button>
   <button id="bScreen" title="Відкрити вигляд для проєктора в новому вікні">Проєктор ↗</button>
   <button id="bEnd" class="danger" title="Закрити кімнату: телефони покажуть «Заняття завершено», повторно приєднатися буде неможливо">Завершити</button>
 </footer>
@@ -185,7 +199,8 @@
   const joinUrl = LS.joinUrl(room);
   const screenUrl = joinUrl + '&view=screen';
 
-  const P = { idx: 0, step: 0, revealed: false, locked: false, blackout: false, shared: false, responses: {}, count: 0 };
+  const P = { idx: 0, step: 0, revealed: false, locked: false, blackout: false, shared: false, responses: {}, count: 0,
+    roster: {}, present: [], walls: {} }; // walls: slideId → [{u, v}] — схвалене для показу, без імен
   let T = null, slides = [], TEACH = {};
 
   /* ---- таймер ---- */
@@ -216,6 +231,7 @@
       revealed: P.revealed, locked: P.locked, blackout: P.blackout, shared: P.shared,
       answer: P.revealed ? (tdata(s).answer || null) : null,
       results: P.shared ? results() : null,
+      wall: (P.walls[s.id] || []).map((x) => x.v),
       t: Date.now(),
     };
   }
@@ -283,34 +299,129 @@
     return a.explain || a.text || '';
   }
 
+  const nameOf = (u) => (P.roster[u] && P.roster[u].n) || 'без імені';
+  const byName = (a, b) => nameOf(a).localeCompare(nameOf(b), 'uk');
+  const wallOf = (s) => (P.walls[s.id] = P.walls[s.id] || []);
+  const onWall = (s, u, v) => wallOf(s).some((x) => (u ? x.u === u : LS.norm(x.v) === LS.norm(v)));
+
+  function toggleWall(u, v) {
+    const s = slide(), w = wallOf(s);
+    const i = w.findIndex((x) => (u ? x.u === u : LS.norm(x.v) === LS.norm(v)));
+    if (i >= 0) w.splice(i, 1); else w.push({ u: u || null, v });
+    push(); renderAll();
+  }
+
+  function renderRoster() {
+    const ids = Object.keys(P.roster).sort(byName);
+    const on = new Set(P.present);
+    const unnamed = P.present.filter((u) => !P.roster[u]).length;
+    $('rosterCount').textContent = ids.length ? `${ids.filter((u) => on.has(u)).length} у мережі · ${ids.length} усього` : '';
+    $('roster').innerHTML = ids.length
+      ? ids.map((u) => `<span style="${on.has(u) ? '' : 'opacity:.45'}">${LS.esc(nameOf(u))}</span>`).join(', ') + (unnamed ? ` · <b>без імені: ${unnamed}</b>` : '')
+      : (unnamed ? `<b>Підключено без імені: ${unnamed}</b> (оновіть правила бази, див. README)` : '<span class="empty">Ще ніхто не приєднався</span>');
+  }
+
   function renderResponses() {
     const s = slide();
     const r = P.responses || {};
-    const vals = Object.values(r);
-    $('respCount').textContent = LS.isAnswerable(s) ? `${vals.length} із ${P.count}` : '';
+    const uids = Object.keys(r);
+    renderRoster();
+    $('respCount').textContent = LS.isAnswerable(s) ? `${uids.length} із ${P.count}` : '';
     if (!LS.isAnswerable(s)) { $('respPanel').hidden = true; return; }
     $('respPanel').hidden = false;
     const a = tdata(s).answer || {};
+    const names = (list) => list.sort(byName).map((u) => LS.esc(nameOf(u))).join(', ');
     let h = '';
     if (s.type === 'mcq') {
       const res = results();
       h = s.options.map((o, i) => {
         const c = res.counts[i], pct = res.total ? Math.round((100 * c) / res.total) : 0;
-        return `<div class="rbar${a.correct === i ? ' ok' : ''}"><span class="l">${'ABCDEFGH'[i]}</span><span class="track"><span class="fill" style="width:${pct}%"></span></span><span class="c">${c} · ${pct}%</span></div>`;
+        const who = uids.filter((u) => parseInt(r[u].v, 10) === i);
+        return `<div class="rbar${a.correct === i ? ' ok' : ''}"><span class="l">${'ABCDEFGH'[i]}</span><span class="track"><span class="fill" style="width:${pct}%"></span></span><span class="c">${c} · ${pct}%</span></div>` +
+          (who.length ? `<div class="rnames">${names(who)}</div>` : '');
       }).join('');
     } else if (s.type === 'gap') {
       const acc = (a.accept || (a.text ? [a.text] : [])).map(LS.norm);
       const groups = {};
-      vals.forEach((x) => { const k = LS.norm(x.v); (groups[k] = groups[k] || { v: x.v, n: 0 }).n++; });
-      const arr = Object.entries(groups).sort((p, q) => q[1].n - p[1].n);
-      h = arr.length ? `<ul class="rlist">${arr.map(([k, g]) => `<li class="${acc.includes(k) ? 'ok' : ''}"><span class="cnt">${g.n}×</span><span>${LS.esc(g.v)}</span>${acc.includes(k) ? ' ✓' : ''}</li>`).join('')}</ul>` : '';
+      uids.forEach((u) => { const k = LS.norm(r[u].v); (groups[k] = groups[k] || { v: r[u].v, us: [] }).us.push(u); });
+      const arr = Object.entries(groups).sort((p, q) => q[1].us.length - p[1].us.length);
+      h = arr.map(([k, g]) => {
+        const ok = acc.includes(k), w = onWall(s, null, g.v);
+        const cls = [ok ? 'ok' : acc.length ? 'no' : '', w ? 'onwall' : ''].join(' ');
+        return `<li class="${cls}"><span class="cnt">${g.us.length}×</span><span class="txt">${LS.esc(g.v)}${ok ? ' ✓' : ''}<span class="names">${names(g.us)}</span></span>` +
+          `<button class="wbtn${w ? ' on' : ''}" data-v="${LS.esc(g.v)}" title="Показати цей варіант на екрані й телефонах (без імен)">${w ? 'На екрані' : 'На екран'}</button></li>`;
+      }).join('');
+      if (h) h = `<ul class="rlist">${h}</ul>`;
     } else {
-      const arr = vals.slice().sort((p, q) => (q.t || 0) - (p.t || 0));
-      h = arr.length ? `<ul class="rlist">${arr.map((x) => `<li><span>${LS.esc(x.v)}</span></li>`).join('')}</ul>` : '';
+      const arr = uids.slice().sort((p, q) => (r[q].t || 0) - (r[p].t || 0));
+      h = arr.map((u) => {
+        const w = onWall(s, u);
+        return `<li class="${w ? 'onwall' : ''}"><span class="who">${LS.esc(nameOf(u))}</span><span class="txt">${LS.esc(r[u].v)}</span>` +
+          `<button class="wbtn${w ? ' on' : ''}" data-u="${LS.esc(u)}" title="Показати на екрані й телефонах (без імені)">${w ? 'На екрані' : 'На екран'}</button></li>`;
+      }).join('');
+      if (h) h = `<ul class="rlist">${h}</ul>`;
     }
-    $('resp').innerHTML = h || '<div class="empty">Поки що відповідей немає</div>';
+    const wn = wallOf(s).length;
+    const info = (s.type !== 'mcq')
+      ? `<div class="wallinfo"><span>${wn ? `На екрані: ${wn} (без імен)` : 'На екран потрапляє лише те, що ви схвалите'}</span>${wn ? '<button class="wbtn" id="wallClear">Прибрати всі</button>' : ''}</div>`
+      : '';
+    // хто в мережі, але ще не відповів
+    const miss = P.present.filter((u) => !r[u]);
+    const missHtml = miss.length ? `<div class="missing"><b>Не відповіли (${miss.length}):</b> ${names(miss)}</div>` : '';
+    $('resp').innerHTML = info + (h || '<div class="empty">Поки що відповідей немає</div>') + missHtml;
     // оновити превʼю телефона, якщо результати показано
     if (P.shared) renderPreview();
+  }
+
+  // один обробник на всю панель: кнопки не «зникають» з-під курсора під час оновлень
+  $('resp').addEventListener('click', (e) => {
+    const b = e.target.closest('.wbtn');
+    if (!b) return;
+    if (b.id === 'wallClear') { P.walls[slide().id] = []; push(); renderAll(); return; }
+    if (b.dataset.u) { const x = P.responses[b.dataset.u]; if (x) toggleWall(b.dataset.u, x.v); }
+    else if (b.dataset.v) toggleWall(null, b.dataset.v);
+  });
+
+  /* ---- звіт: таблиця «студент × завдання» (CSV для Excel) ---- */
+  async function report() {
+    let all;
+    try { all = await T.getAllResponses(); } catch (e) { alert('Не вдалося отримати відповіді: ' + e.message); return false; }
+    const tasks = slides.filter((x) => LS.isAnswerable(x) && all[x.id]);
+    if (!tasks.length) { alert('На цьому занятті ще немає жодної відповіді.'); return false; }
+    const users = new Set(Object.keys(P.roster));
+    tasks.forEach((x) => Object.keys(all[x.id]).forEach((u) => users.add(u)));
+    const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+    const plain = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    const head = ['Студент', 'Правильно', 'Перевірних', 'Відповідей'].concat(tasks.map((x, i) => `${slides.indexOf(x) + 1}. ${plain(x.kicker || x.title || x.prompt).slice(0, 40)}`));
+    const rows = Array.from(users).sort(byName).map((u) => {
+      let ok = 0, keyed = 0, n = 0;
+      const cells = tasks.map((x) => {
+        const rr = (all[x.id] || {})[u];
+        const a = (TEACH[x.id] || {}).answer || {};
+        if (!rr) return '';
+        n++;
+        if (x.type === 'mcq') {
+          const i = parseInt(rr.v, 10), L = 'ABCDEFGH'[i] || rr.v;
+          if (a.correct == null) return L;
+          keyed++; if (a.correct === i) { ok++; return L + ' ✓'; } return L + ' ✗';
+        }
+        if (x.type === 'gap' && (a.accept || a.text)) {
+          keyed++;
+          const good = (a.accept || [a.text]).map(LS.norm).includes(LS.norm(rr.v));
+          if (good) ok++;
+          return rr.v + (good ? ' ✓' : ' ✗');
+        }
+        return rr.v;
+      });
+      return [nameOf(u), ok, keyed, n].concat(cells);
+    });
+    const csv = '﻿' + [head].concat(rows).map((r) => r.map(q).join(';')).join('\r\n');
+    const d = new Date(), pad = (x) => String(x).padStart(2, '0');
+    const fn = `${lessonId}_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${room}.csv`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    link.download = fn; document.body.appendChild(link); link.click(); link.remove();
+    return true;
   }
 
   function renderPreview() {
@@ -319,6 +430,7 @@
     $('cur').replaceChildren(LS.render(s, {
       step: P.step, revealed: P.revealed, answer: td.answer || null,
       results: P.shared ? results() : null, locked: P.locked, mode: 'preview', interactive: false,
+      wall: (P.walls[s.id] || []).map((x) => x.v),
     }));
     const n = slides[P.idx + 1];
     if (n) $('next').replaceChildren(LS.render(n, { step: 99, mode: 'preview' }));
@@ -340,6 +452,7 @@
 
     const ans = LS.isAnswerable(s), mcq = s.type === 'mcq';
     $('bReveal').disabled = !ans; $('bLock').disabled = !ans; $('bShare').disabled = !mcq; $('bClear').disabled = !ans;
+    const wn = (P.walls[s.id] || []).length;
     $('bReveal').classList.toggle('on', P.revealed);
     $('bReveal').firstChild.textContent = P.revealed ? 'Сховати відповідь ' : 'Відповідь ';
     $('bShare').classList.toggle('on', P.shared);
@@ -349,7 +462,7 @@
     $('bPrev').disabled = P.idx === 0 && P.step === 0;
     $('bNext').disabled = P.idx === slides.length - 1 && P.step >= sc;
     const B = (on, t, w) => `<span class="badge${w ? ' warn' : ''}${on ? ' on' : ''}">${t}</span>`;
-    $('badges').innerHTML = B(P.revealed, 'Відповідь відкрито') + B(P.locked, 'Приймання закрито', 1) + B(P.shared, 'Результати на телефонах') + B(P.blackout, 'Телефони притемнено', 1);
+    $('badges').innerHTML = B(P.revealed, 'Відповідь відкрито') + B(P.locked, 'Приймання закрито', 1) + B(P.shared, 'Результати на телефонах') + B(P.blackout, 'Телефони притемнено', 1) + B(wn > 0, `На екрані відповідей: ${wn}`);
     layout();
   }
 
@@ -371,10 +484,12 @@
   /* ---- кнопки й клавіші ---- */
   $('bNext').onclick = next; $('bPrev').onclick = prev;
   $('bReveal').onclick = reveal; $('bShare').onclick = share; $('bLock').onclick = lockR; $('bBlack').onclick = black;
-  $('bClear').onclick = () => { if (confirm('Стерти всі відповіді на цьому слайді?')) T.clearResponses(slide().id); };
+  $('bClear').onclick = () => { if (confirm('Стерти всі відповіді на цьому слайді?')) { P.walls[slide().id] = []; T.clearResponses(slide().id); push(); renderPreview(); } };
+  $('bReport').onclick = () => report();
   $('bScreen').onclick = () => window.open(screenUrl, 'ls-screen');
   $('bEnd').onclick = async () => {
     if (!confirm('Завершити заняття?\n\nТелефони студентів покажуть «Заняття завершено», а кімнату ' + room + ' буде закрито назавжди. Відповіді студентів буде стерто.')) return;
+    if (confirm('Завантажити звіт (хто що відповів) перед тим, як відповіді буде стерто?\n\nOK — завантажити звіт.\nСкасувати — завершити без звіту.')) { await report(); }
     try { await T.endRoom(lessonId); }
     catch (e) { alert('Не вдалося завершити заняття: ' + e.message); return; }
     T = null;
@@ -454,7 +569,12 @@
     }
     $('gate').hidden = true;
     T.onConnection((on) => $('conn').classList.toggle('on', on));
-    T.onPresence((n) => { if (n !== P.count) { P.count = n; $('count').textContent = n; renderResponses(); } });
+    T.onPresence((n, uids) => {
+      const ids = (uids || []).slice().sort();
+      if (n === P.count && ids.join() === P.present.slice().sort().join()) return; // нічого не змінилося
+      P.count = n; P.present = ids; $('count').textContent = n; renderResponses();
+    });
+    T.onRoster((ro) => { P.roster = ro; renderResponses(); });
     if (resume && resume.slide >= 0 && resume.slide < slides.length) {
       go(resume.slide, Math.min(resume.step || 0, LS.stepCount(slides[resume.slide])));
     } else {

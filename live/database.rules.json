@@ -2,8 +2,8 @@
   "rules": {
     "rooms": {
       "$room": {
-        ".read": "auth != null && auth.token.email == 'ваша.адреса@gmail.com' && auth.token.email_verified == true",
-        ".write": "auth != null && auth.token.email == 'ваша.адреса@gmail.com' && auth.token.email_verified == true",
+        ".read": "auth != null && auth.token.email == 'kisilmv@gmail.com' && auth.token.email_verified == true",
+        ".write": "auth != null && auth.token.email == 'kisilmv@gmail.com' && auth.token.email_verified == true",
 
         "state": {
           ".read": true
@@ -16,10 +16,21 @@
           }
         },
 
+        "roster": {
+          "$uid": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid && !data.exists()",
+            ".validate": "newData.hasChildren(['n', 't']) && newData.child('n').isString() && newData.child('n').val().length >= 3 && newData.child('n').val().length <= 60 && newData.child('t').val() == now",
+            "n": { ".validate": true },
+            "t": { ".validate": true },
+            "$other": { ".validate": false }
+          }
+        },
+
         "responses": {
           "$slide": {
             "$uid": {
-              ".write": "auth != null && auth.uid == $uid && root.child('rooms').child($room).child('state/slideId').val() == $slide && root.child('rooms').child($room).child('state/locked').val() != true && root.child('rooms').child($room).child('state/revealed').val() != true",
+              ".write": "auth != null && auth.uid == $uid && root.child('rooms').child($room).child('roster').child($uid).exists() && root.child('rooms').child($room).child('state/slideId').val() == $slide && root.child('rooms').child($room).child('state/locked').val() != true && root.child('rooms').child($room).child('state/revealed').val() != true",
               ".validate": "newData.hasChildren(['v', 't']) && newData.child('v').isString() && newData.child('v').val().length > 0 && newData.child('v').val().length <= 300 && newData.child('t').val() == now",
               "v": { ".validate": true },
               "t": { ".validate": true },

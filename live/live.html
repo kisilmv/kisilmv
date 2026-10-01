@@ -57,6 +57,9 @@
   }
   .joinform button { font: inherit; font-size: 18px; font-weight: 700; min-height: 54px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; }
   .err { color: var(--no); }
+  .joinform input.name { font-size: 22px; letter-spacing: normal; text-transform: none; text-align: left; }
+  .joinform .note { font-size: 14px; color: var(--ink-2); line-height: 1.45; margin: 0; }
+  .me { font-size: 13px; color: var(--ink-2); white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
 
   /* ---- екран аудиторії (проєктор): ?view=screen ---- */
   body.screen .app { max-width: none; }
@@ -74,6 +77,7 @@
 <div class="app">
   <header class="lbar">
     <span class="l-title" id="lt">Підключення…</span>
+    <span class="me" id="me" hidden></span>
     <span class="l-pos" id="lp"></span>
     <span class="dot" id="conn" title="З'єднання"></span>
   </header>
@@ -87,6 +91,16 @@
 
 <div class="cover" id="blackout" hidden><div><div class="big">👀</div><p>Подивіться на викладача</p></div></div>
 <div class="cover" id="wait" hidden><div><div class="big">⏳</div><p id="waitMsg">Підключення до заняття…</p><small id="waitSub"></small></div></div>
+<div class="cover" id="nameGate" hidden>
+  <form class="joinform" id="nameForm" novalidate>
+    <h1>Хто ви?</h1>
+    <label for="nm">Прізвище та ім'я</label>
+    <input id="nm" class="name" maxlength="60" autocomplete="name" autocapitalize="words" spellcheck="false" placeholder="Петренко Олена" required>
+    <p class="note">Ім'я бачить лише викладач. На екрані й на телефонах одногрупників відповіді показуються без імен.</p>
+    <p class="err" id="nmErr" hidden></p>
+    <button type="submit">Приєднатися</button>
+  </form>
+</div>
 <div class="cover" id="join" hidden>
   <form class="joinform" id="joinForm">
     <h1>Заняття наживо</h1>
@@ -165,6 +179,7 @@
       onRespond: (v) => respond(slide.id, v),
     });
     if (isScreen) ctx.results = isLive && state.shared ? state.results : null;
+    ctx.wall = isLive ? state.wall || null : null;
 
     const same = view.dataset.slide === slide.id;
     const prevStep = same ? +(view.dataset.step || 0) : -1;
@@ -243,11 +258,43 @@
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) (dx > 0 ? $('bPrev') : $('bNext')).click();
   }, { passive: true });
 
+  /* ---- ім'я: один раз на кімнату; змінити його може лише викладач ---- */
+  const NAME_RE = /^[\p{L}][\p{L}'’ʼ.\- ]{1,58}[\p{L}.]$/u;
+  const cleanName = (v) => v.replace(/\s+/g, ' ').trim();
+  function askName() {
+    return new Promise((resolve) => {
+      $('wait').hidden = true;
+      $('nameGate').hidden = false;
+      const inp = $('nm'), err = $('nmErr');
+      inp.value = LS.store.get('ls-name') || '';
+      $('nameForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const n = cleanName(inp.value);
+        const bad = !NAME_RE.test(n) ? 'Вкажіть справжнє ім\'я літерами.' : n.split(' ').length < 2 ? 'Вкажіть і прізвище, і ім\'я.' : '';
+        if (bad) { err.textContent = bad; err.hidden = false; inp.focus(); return; }
+        err.hidden = true;
+        try { await T.setName(n); }
+        catch (x) { console.warn('roster', x); } // старі правила бази: продовжуємо без імені
+        LS.store.set('ls-name', n);
+        $('nameGate').hidden = true;
+        resolve(n);
+      };
+      setTimeout(() => inp.focus(), 50);
+    });
+  }
+  const showMe = (n) => { if (n) { $('me').hidden = false; $('me').textContent = '👤 ' + n; } };
+
   /* ---- старт ---- */
   (async () => {
     try {
       T = await LS.studentTransport(room, { screen: isScreen });
       T.onConnection((on) => { $('conn').classList.toggle('on', on); });
+      if (!isScreen) {
+        let n = null;
+        try { n = await T.getMyName(); } catch (x) { console.warn('roster', x); }
+        if (!n) n = await askName();
+        showMe(n);
+      }
       T.onState(onState);
       if (!isScreen) T.startPresence();
     } catch (e) {

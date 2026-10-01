@@ -87,6 +87,13 @@
     return `<div class="s-status">${hint}</div>`;
   }
 
+  // «стіна»: схвалені викладачем відповіді, без імен
+  function wallHtml(ctx) {
+    const w = ctx.wall;
+    if (!w || !w.length) return '';
+    return `<div class="wall"><div class="wall-h">Відповіді групи</div>${w.map((v) => `<div class="wall-i">${LS.esc(v)}</div>`).join('')}</div>`;
+  }
+
   LS.render = (slide, ctx) => {
     ctx = Object.assign({ step: 99, mode: 'phone', interactive: false }, ctx || {});
     ctx.canAnswer = ctx.interactive && !ctx.locked && !ctx.revealed;
@@ -154,7 +161,7 @@
         const form = ctx.canAnswer
           ? `<form class="ans"><input class="ans-in" name="a" maxlength="80" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="${LS.esc(slide.placeholder || 'Ваша відповідь')}"><button class="ans-btn" type="submit">Надіслати</button></form>`
           : '';
-        h = `${kicker}${slide.instruction ? `<p class="s-instr">${slide.instruction}</p>` : ''}<p class="s-sentence">${sentence}</p>${form}${statusLine(slide, ctx)}${verdict}${explain}`;
+        h = `${kicker}${slide.instruction ? `<p class="s-instr">${slide.instruction}</p>` : ''}<p class="s-sentence">${sentence}</p>${form}${statusLine(slide, ctx)}${verdict}${explain}${wallHtml(ctx)}`;
         break;
       }
       case 'open': {
@@ -162,7 +169,7 @@
           ? `<form class="ans ans--open"><textarea class="ans-in" name="a" maxlength="300" rows="3" placeholder="${LS.esc(slide.placeholder || 'Ваша відповідь')}"></textarea><button class="ans-btn" type="submit">Надіслати</button></form>`
           : '';
         const mine = ctx.mine != null && ctx.mode !== 'preview' ? `<div class="mine"><span>Ваша відповідь</span>${LS.esc(ctx.mine)}</div>` : '';
-        h = `${kicker}<div class="s-prompt">${slide.prompt || ''}</div>${form}${mine}${statusLine(slide, ctx)}${explain}`;
+        h = `${kicker}<div class="s-prompt">${slide.prompt || ''}</div>${form}${mine}${statusLine(slide, ctx)}${explain}${wallHtml(ctx)}`;
         break;
       }
       case 'end':
@@ -229,7 +236,9 @@
       signIn: () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then((r) => r.user),
       signOut: () => auth.signOut(),
       setState: (s) => base.child('state').set(s),
-      onPresence: (cb) => base.child('presence').on('value', (s) => cb(s.numChildren()), (e) => console.warn(e)),
+      onPresence: (cb) => base.child('presence').on('value', (s) => cb(s.numChildren(), Object.keys(s.val() || {})), (e) => console.warn(e)),
+      onRoster: (cb) => base.child('roster').on('value', (s) => cb(s.val() || {}), (e) => console.warn(e)),
+      getAllResponses: () => base.child('responses').once('value').then((x) => x.val() || {}),
       watchResponses(slideId, cb) {
         if (respRef) respRef.off();
         respRef = base.child('responses/' + slideId);
@@ -265,6 +274,9 @@
         });
       },
       respond: (slideId, v) => base.child(`responses/${slideId}/${uid}`).set({ v, t: firebase.database.ServerValue.TIMESTAMP }),
+      // ім'я в цій кімнаті: записується один раз, змінити може лише викладач
+      getMyName: () => base.child('roster/' + uid).once('value').then((x) => (x.val() || {}).n || null),
+      setName: (n) => base.child('roster/' + uid).set({ n, t: firebase.database.ServerValue.TIMESTAMP }),
       onConnection: (cb) => db.ref('.info/connected').on('value', (s) => cb(!!s.val())),
     };
   }
@@ -274,17 +286,20 @@
      ======================================================================= */
   function demoTeacher(room) {
     const bc = new BroadcastChannel('ls-' + room);
-    let state = null, presCb = null, respCb = null, watched = null;
-    const seen = {}, resp = {};
+    let state = null, presCb = null, respCb = null, watched = null, rosterCb = null;
+    const seen = {}, resp = {}, roster = {};
     bc.onmessage = (e) => {
       const m = e.data || {};
       if (m.k === 'hello') {
         if (!m.screen) seen[m.cid] = Date.now();
         if (state) bc.postMessage({ k: 'state', s: state });
+      } else if (m.k === 'name') {
+        if (!roster[m.cid]) { roster[m.cid] = { n: String(m.n).slice(0, 60), t: Date.now() }; if (rosterCb) rosterCb(Object.assign({}, roster)); }
       } else if (m.k === 'bye') {
         delete seen[m.cid];
       } else if (m.k === 'resp') {
         // ті самі обмеження, що й у правилах Firebase
+        if (!roster[m.cid]) return;
         if (!state || state.slideId !== m.slideId || state.locked || state.revealed) return;
         (resp[m.slideId] = resp[m.slideId] || {})[m.cid] = { v: String(m.v).slice(0, 300), t: Date.now() };
         if (watched === m.slideId && respCb) respCb(Object.assign({}, resp[m.slideId]));
@@ -294,7 +309,7 @@
       const now = Date.now();
       let n = 0;
       for (const k in seen) { if (now - seen[k] < 12000) n++; else delete seen[k]; }
-      if (presCb) presCb(n);
+      if (presCb) presCb(n, Object.keys(seen));
     }, 1000);
     return {
       kind: 'demo',
@@ -303,12 +318,15 @@
       signOut: async () => {},
       setState: async (s) => { state = JSON.parse(JSON.stringify(s)); bc.postMessage({ k: 'state', s: state }); },
       onPresence: (cb) => { presCb = cb; },
+      onRoster: (cb) => { rosterCb = cb; cb(Object.assign({}, roster)); },
+      getAllResponses: async () => JSON.parse(JSON.stringify(resp)),
       watchResponses: (id, cb) => { watched = id; respCb = cb; cb(Object.assign({}, resp[id] || {})); },
       clearResponses: async (id) => { delete resp[id]; if (watched === id && respCb) respCb({}); },
       clearRoom: async () => { for (const k in resp) delete resp[k]; },
       getState: async () => (state ? JSON.parse(JSON.stringify(state)) : null),
       endRoom: async (lesson) => {
         for (const k in resp) delete resp[k];
+        for (const k in roster) delete roster[k];
         state = { ended: true, lesson: lesson || null, t: Date.now() };
         bc.postMessage({ k: 'state', s: state });
       },
@@ -325,7 +343,11 @@
     } catch (e) { cid = Math.random().toString(36).slice(2, 10); }
     let stateCb = null;
     bc.onmessage = (e) => { const m = e.data || {}; if (m.k === 'state' && stateCb) stateCb(m.s); };
-    const hello = () => bc.postMessage({ k: 'hello', cid, screen: !!opts.screen });
+    const hello = () => {
+      bc.postMessage({ k: 'hello', cid, screen: !!opts.screen });
+      let n = null; try { n = sessionStorage.getItem('ls-dname-' + room); } catch (e) { /* */ }
+      if (n) bc.postMessage({ k: 'name', cid, n });
+    };
     return {
       kind: 'demo',
       uid: cid,
@@ -335,6 +357,8 @@
         addEventListener('pagehide', () => bc.postMessage({ k: 'bye', cid }));
       },
       respond: async (slideId, v) => bc.postMessage({ k: 'resp', slideId, cid, v }),
+      getMyName: async () => { try { return sessionStorage.getItem('ls-dname-' + room); } catch (e) { return null; } },
+      setName: async (n) => { try { sessionStorage.setItem('ls-dname-' + room, n); } catch (e) { /* */ } bc.postMessage({ k: 'name', cid, n }); },
       onConnection: (cb) => cb(true),
     };
   }

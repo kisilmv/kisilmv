@@ -162,3 +162,12 @@
 .mode-screen .opts { display: grid; grid-template-columns: 1fr 1fr; }
 .mode-screen .opt { min-height: 9vh; }
 .mode-screen .s-explain { font-size: clamp(18px, 1.8vw, 28px); }
+
+/* ---------- стіна відповідей (схвалені викладачем, без імен) ---------- */
+.wall { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.wall-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+.wall-i { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; animation: wallIn .35s ease-out; }
+@keyframes wallIn { from { opacity: 0; transform: translateY(6px); } }
+.mode-screen .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 1.4vh 1.4vw; }
+.mode-screen .wall-h { grid-column: 1 / -1; font-size: clamp(14px, 1.2vw, 20px); }
+.mode-screen .wall-i { font-size: clamp(20px, 2vw, 32px); }
