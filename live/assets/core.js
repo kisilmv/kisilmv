@@ -128,7 +128,7 @@
           const cls = ['opt'];
           if (ctx.mine === String(i)) cls.push('is-mine');
           if (a && a.correct === i) cls.push('is-correct');
-          if (a && ctx.mine === String(i) && a.correct !== i) cls.push('is-wrong');
+          if (a && a.correct != null && ctx.mine === String(i) && a.correct !== i) cls.push('is-wrong'); // опитування без ключа: свій вибір не червоніє
           const pct = res && res.total ? Math.round((100 * ((res.counts || [])[i] || 0)) / res.total) : null;
           return `<button type="button" class="${cls.join(' ')}" data-v="${i}"${ctx.canAnswer ? '' : ' disabled'}>` +
             (pct !== null ? `<span class="opt-bar" style="width:${pct}%"></span>` : '') +
