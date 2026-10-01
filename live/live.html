@@ -209,6 +209,12 @@
 
   async function onState(s) {
     if (!s) { wait('Кімнату ' + room + ' ще не відкрито', 'Зачекайте, поки викладач почне заняття'); state = null; return; }
+    // завершене або давно покинуте заняття: не показувати, просити новий QR
+    if (s.ended || (s.t && Date.now() - s.t > 6 * 60 * 60 * 1000)) {
+      state = null; $('blackout').hidden = true;
+      wait('Заняття завершено', 'Щоб приєднатися до нового заняття, проскануйте QR-код на екрані викладача.');
+      return;
+    }
     const prevSlide = state ? state.slide : null;
     state = s;
     if (lessonId !== s.lesson && !loading) {

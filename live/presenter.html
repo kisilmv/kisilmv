@@ -93,6 +93,7 @@
   .gate p { color: var(--ink-2); line-height: 1.5; }
   .gate button { margin-top: 12px; background: var(--accent); color: #fff; border: 0; border-radius: 12px; padding: 14px 22px; font-weight: 700; font-size: 17px; }
   .gate .err { color: var(--no); }
+  .bar button.danger { color: var(--no); }
 </style>
 <script src="firebase-config.js"></script>
 <script src="assets/qrcode.min.js"></script>
@@ -138,6 +139,7 @@
   <span class="sp"></span>
   <button id="bClear" title="Стерти відповіді на цьому слайді">Очистити</button>
   <button id="bScreen" title="Відкрити вигляд для проєктора в новому вікні">Проєктор ↗</button>
+  <button id="bEnd" class="danger" title="Закрити кімнату: телефони покажуть «Заняття завершено», повторно приєднатися буде неможливо">Завершити</button>
 </footer>
 
 <div class="overlay" id="qrOverlay" hidden>
@@ -165,6 +167,14 @@
   /* ---- кімната й урок ---- */
   const lessonId = LS.params.get('lesson') || 'demo';
   let room = (LS.params.get('room') || '').toUpperCase();
+  const roomFromUrl = LS.validRoom(room);
+  const STALE_MS = 3 * 60 * 60 * 1000; // кімната, не використовувана понад 3 год, вважається старою
+  // перезапустити пульт із новою кімнатою (той самий урок)
+  const freshRoom = () => {
+    const u = new URL(location.href);
+    u.searchParams.delete('room');
+    location.replace(u.toString().replace(/demo=(&|$)/, 'demo$1'));
+  };
   if (!LS.validRoom(room)) {
     room = LS.roomCode();
     const u = new URL(location.href);
@@ -363,6 +373,15 @@
   $('bReveal').onclick = reveal; $('bShare').onclick = share; $('bLock').onclick = lockR; $('bBlack').onclick = black;
   $('bClear').onclick = () => { if (confirm('Стерти всі відповіді на цьому слайді?')) T.clearResponses(slide().id); };
   $('bScreen').onclick = () => window.open(screenUrl, 'ls-screen');
+  $('bEnd').onclick = async () => {
+    if (!confirm('Завершити заняття?\n\nТелефони студентів покажуть «Заняття завершено», а кімнату ' + room + ' буде закрито назавжди. Відповіді студентів буде стерто.')) return;
+    try { await T.endRoom(lessonId); }
+    catch (e) { alert('Не вдалося завершити заняття: ' + e.message); return; }
+    T = null;
+    gate(`<h1>Заняття завершено</h1><p>Кімнату <b>${room}</b> закрито. Студенти з цього заняття більше не зможуть до неї приєднатися.</p>
+      <button id="bAgain">Почати нове заняття з цим уроком</button>`);
+    $('bAgain').onclick = freshRoom;
+  };
 
   document.addEventListener('keydown', (e) => {
     if (!T || !slides.length || e.target.closest('input,textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -417,12 +436,31 @@
     begin();
   }
 
-  function begin() {
+  async function begin() {
+    // захист від повторного використання старої кімнати (наприклад, адреса з історії браузера)
+    let resume = null;
+    if (roomFromUrl) {
+      let old = null;
+      try { old = await T.getState(); } catch (e) { console.warn(e); }
+      if (old) {
+        if (old.ended || old.lesson !== lessonId) { freshRoom(); return; }
+        const age = Date.now() - (old.t || 0);
+        if (age > STALE_MS) {
+          const when = old.t ? new Date(old.t).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'давно';
+          if (confirm('Кімната ' + room + ' належить до попереднього заняття (востаннє використовувалася ' + when + ').\n\nOK — почати нове заняття з новою кімнатою (рекомендовано).\nСкасувати — продовжити стару кімнату.')) { freshRoom(); return; }
+        }
+        resume = old;
+      }
+    }
     $('gate').hidden = true;
     T.onConnection((on) => $('conn').classList.toggle('on', on));
     T.onPresence((n) => { if (n !== P.count) { P.count = n; $('count').textContent = n; renderResponses(); } });
-    go(0, 0);
-    toggleQR(true);
+    if (resume && resume.slide >= 0 && resume.slide < slides.length) {
+      go(resume.slide, Math.min(resume.step || 0, LS.stepCount(slides[resume.slide])));
+    } else {
+      go(0, 0);
+      toggleQR(true);
+    }
   }
 
   start();

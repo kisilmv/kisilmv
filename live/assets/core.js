@@ -237,6 +237,9 @@
       },
       clearResponses: (slideId) => base.child('responses/' + slideId).remove(),
       clearRoom: () => base.remove(),
+      getState: () => base.child('state').once('value').then((x) => x.val()),
+      // завершити заняття: стерти відповіді й присутність, лишити лише позначку «завершено»
+      endRoom: (lesson) => base.set({ state: { ended: true, lesson: lesson || null, t: Date.now() } }),
       onConnection: (cb) => db.ref('.info/connected').on('value', (s) => cb(!!s.val())),
     };
   }
@@ -303,6 +306,12 @@
       watchResponses: (id, cb) => { watched = id; respCb = cb; cb(Object.assign({}, resp[id] || {})); },
       clearResponses: async (id) => { delete resp[id]; if (watched === id && respCb) respCb({}); },
       clearRoom: async () => { for (const k in resp) delete resp[k]; },
+      getState: async () => (state ? JSON.parse(JSON.stringify(state)) : null),
+      endRoom: async (lesson) => {
+        for (const k in resp) delete resp[k];
+        state = { ended: true, lesson: lesson || null, t: Date.now() };
+        bc.postMessage({ k: 'state', s: state });
+      },
       onConnection: (cb) => cb(true),
     };
   }
