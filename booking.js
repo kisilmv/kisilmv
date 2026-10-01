@@ -9,7 +9,7 @@
 const BOOKING_API_URL = 'https://script.google.com/macros/s/AKfycbyL8sr92dUOL0hEksMiwsiN-OvRgPkqJOkQE5MbLc782JYWYKqF7dReX5_pRtTMB_VU/exec';
 
 const BOOKING_TZ = 'Europe/Kyiv';
-const CANCEL_MIN_HOURS = 12;
+const CANCEL_MIN_HOURS = 1;
 
 (function () {
   const $ = (id) => document.getElementById(id);
