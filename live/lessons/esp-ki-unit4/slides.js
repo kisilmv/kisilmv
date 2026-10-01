@@ -2,8 +2,8 @@
    Unit 4 · Embedded and IoT Security: Closing the Back Doors
    ESP · Комп'ютерна інженерія · B1
    ПУБЛІЧНА частина: те, що бачать студенти. Нотатки й ключі — у teacher.js.
-   Частина 1 (≈80 хв): Lead-in + Grammar (4.1–4.4)
-   Частина 2 (≈80 хв): Vocabulary (4.5) · Reading (4.6–4.8) · Dialogues (4.9) · 4.10 · Speaking (4.11)
+   Безперервна презентація: Lead-in · Grammar (4.1–4.4) · Vocabulary (4.5) ·
+   Reading (4.6–4.8) · Dialogues (4.9) · 4.10 · Speaking (4.11)
    ========================================================================= */
 (function () {
   const K = (s) => '<span class="muted">' + s + '</span>';
@@ -14,7 +14,6 @@
   const S = [];
   const add = (o) => S.push(o);
 
-  /* ===================== ЧАСТИНА 1 ===================== */
   add({ id: 'title', type: 'title',
     kicker: 'Unit 4 · English for Computer Engineering',
     title: 'Embedded and IoT Security',
@@ -179,12 +178,7 @@
   FM('e44_8', 8, 'Our team designs the iron for the new controller.',
     ['Our team', 'designs', 'the iron', 'for the new controller']);
 
-  add({ id: 'p1end', type: 'end', kicker: 'End of Part 1',
-    title: 'Part 1: done',
-    text: 'Next time: vocabulary, the Mirai story and your security briefing.' });
-
-  /* ===================== ЧАСТИНА 2 ===================== */
-  add({ id: 'v0', type: 'end', kicker: 'Part 2 · Vocabulary',
+  add({ id: 'v0', type: 'end', kicker: 'Vocabulary',
     title: 'Words for attacks and defenses',
     text: 'American spelling and pronunciation, as in industry documentation.' });
 
