@@ -33,6 +33,7 @@ const CONFIG = {
   CALENDAR_NAME: 'Приватні заняття',          // запасний варіант: пошук за назвою
   FREE_TITLE: 'Вільно',                        // назва події, що означає відкритий слот
   BOOKED_PREFIX: 'Зайнято: ',                  // префікс назви заброньованої події
+  BOOKED_COLOR: CalendarApp.EventColor.RED,    // колір заброньованої події (найтемніший червоний у Google Календарі, «Томатний», id 11)
   TIMEZONE: 'Europe/Kyiv',
   DAYS_AHEAD: 28,                              // на скільки днів уперед показувати слоти
   MIN_LEAD_HOURS: 1,                           // не можна забронювати слот, що починається раніше ніж за N год
@@ -151,6 +152,7 @@ function book_(body) {
 
   const token = Utilities.getUuid();
   ev.setTitle(CONFIG.BOOKED_PREFIX + name);
+  safe_(() => ev.setColor(CONFIG.BOOKED_COLOR));
   ev.setDescription([
     'Студент: ' + name,
     'Email: ' + email,
@@ -204,6 +206,7 @@ function cancel_(key, token) {
   const email = ev.getTag('email') || '';
 
   ev.setTitle(CONFIG.FREE_TITLE);
+  resetColor_(ev);
   ev.setDescription('');
   ['token', 'email', 'name'].forEach((k) => ev.deleteTag(k));
 
@@ -418,4 +421,14 @@ function fail_(code, message) {
 
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+
+/** Повертає звільненому слоту колір календаря (або нейтральний, якщо скидання не підтримується). */
+function resetColor_(ev) {
+  try {
+    ev.setColor('');
+  } catch (e) {
+    safe_(() => ev.setColor(CalendarApp.EventColor.PALE_GREEN));
+  }
 }
